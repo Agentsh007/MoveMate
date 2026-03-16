@@ -1,0 +1,194 @@
+/* =============================================
+   MoveMate Design System — Global Styles
+   ============================================= */
+
+/* Import Leaflet styles (must be before @tailwind) */
+@import 'leaflet/dist/leaflet.css';
+
+/* Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- CSS Variables ---- */
+:root {
+  --color-primary: #1A3C5E;
+  --color-primary-light: #2A5C8E;
+  --color-accent: #F97316;
+  --color-accent-hover: #EA6F10;
+  --color-bg: #F8F7F4;
+  --color-surface: #FFFFFF;
+  --color-text: #1C1C1C;
+  --color-text-muted: #6B7280;
+  --color-border: #E5E3DF;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --radius: 10px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* ---- Base Styles ---- */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  input, textarea, select {
+    font-family: inherit;
+  }
+}
+
+/* ---- Component Styles ---- */
+@layer components {
+  /* Primary button */
+  .btn-primary {
+    @apply bg-accent text-white font-medium px-6 py-3 rounded-[10px]
+           hover:bg-accent-hover transition-all duration-200
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply bg-white text-primary border border-border px-6 py-3 rounded-[10px]
+           hover:bg-gray-50 transition-all duration-200;
+  }
+
+  /* Outline button */
+  .btn-outline {
+    @apply bg-transparent text-primary border-2 border-primary px-6 py-3 rounded-[10px]
+           hover:bg-primary hover:text-white transition-all duration-200;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-[10px] shadow-card overflow-hidden
+           transition-shadow duration-200 hover:shadow-elevated;
+  }
+
+  /* Input field */
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-border rounded-[10px]
+           text-gray-900 placeholder-gray-400
+           focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
+           transition-all duration-200;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-700;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-700;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-100 text-red-700;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-blue-700;
+  }
+
+  /* Section */
+  .section {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12;
+  }
+
+  /* Page container */
+  .page-container {
+    @apply min-h-screen pt-16;
+  }
+}
+
+/* ---- Utility animations ---- */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-pulse-dot {
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Leaflet map overrides */
+.leaflet-container {
+  font-family: 'DM Sans', sans-serif;
+  border-radius: 10px;
+}
