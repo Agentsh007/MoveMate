@@ -141,10 +141,10 @@ export default function Login() {
         <div className="mt-6 bg-blue-50 rounded-xl p-4 border border-blue-100">
           <p className="text-xs font-medium text-blue-700 mb-1">🔑 Demo Accounts</p>
           <p className="text-xs text-blue-600">
-            <strong>Owner:</strong> owner1@ethereal.email / Test@1234
+            <strong>Owner:</strong> owner1@dummyinbox.com / Test@1234
           </p>
           <p className="text-xs text-blue-600">
-            <strong>User:</strong> user1@ethereal.email / Test@1234
+            <strong>User:</strong> user1@dummyinbox.com / Test@1234
           </p>
         </div>
       </div>

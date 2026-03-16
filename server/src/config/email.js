@@ -1,16 +1,19 @@
 // =============================================
-// Email Configuration — Nodemailer + Ethereal Email
+// Email Configuration — Nodemailer + DummyInbox.com
 // =============================================
-// WHY Ethereal?
-// During development, you don't want to send real emails.
-// Ethereal is a fake SMTP service that CAPTURES emails
-// so you can view them in a web interface, but they're
-// never actually delivered to anyone.
+// HOW IT WORKS:
+// We send emails TO @dummyinbox.com addresses.
+// View received emails at: https://dummyinbox.com/mail/<username>
+// Example: owner1@dummyinbox.com → https://dummyinbox.com/mail/owner1
 //
-// In production, just change these env vars to a real
-// SMTP provider (Gmail, SendGrid, Resend, etc.)
+// No passwords needed — just visit the URL to see emails!
 //
-// View captured emails: https://ethereal.email/login
+// SENDING METHOD:
+// If SMTP credentials are provided in .env → uses that SMTP server
+// Otherwise → uses Nodemailer's "direct" transport which sends
+// directly to dummyinbox.com's mail server (no relay needed)
+//
+// In production, set EMAIL_HOST/USER/PASS to a real SMTP provider
 // =============================================
 
 import nodemailer from 'nodemailer';
@@ -18,36 +21,49 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT),
-  secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for 587
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Build transporter based on available config
+let transporter;
+
+if (process.env.EMAIL_HOST && process.env.EMAIL_USER) {
+  // SMTP relay mode (Gmail, SendGrid, Ethereal, etc.)
+  transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: parseInt(process.env.EMAIL_PORT) || 587,
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+} else {
+  // Direct transport — sends to destination MX server without a relay
+  // Perfect for development with dummyinbox.com
+  transporter = nodemailer.createTransport({
+    direct: true,
+  });
+}
 
 /**
  * Send an email notification
  * @param {Object} options
- * @param {string} options.to - Recipient email
+ * @param {string} options.to - Recipient email (e.g. owner1@dummyinbox.com)
  * @param {string} options.subject - Email subject
  * @param {string} options.html - HTML body
  * @returns {Promise<Object>} Nodemailer send result
  */
 export const sendEmail = async ({ to, subject, html }) => {
   try {
+    const fromAddr = process.env.EMAIL_USER || 'noreply@movemate.app';
+
     const info = await transporter.sendMail({
-      from: `"MoveMate" <${process.env.EMAIL_USER}>`,
+      from: `"MoveMate" <${fromAddr}>`,
       to,
       subject,
       html,
     });
 
     console.log(`📧 Email sent: ${info.messageId}`);
-    // For Ethereal, you can view the email at this URL:
-    console.log(`   Preview: ${nodemailer.getTestMessageUrl(info)}`);
+    console.log(`   View at: https://dummyinbox.com/mail/${to.split('@')[0]}`);
     return info;
   } catch (error) {
     console.error('❌ Email send failed:', error.message);
@@ -61,8 +77,13 @@ export const sendEmail = async ({ to, subject, html }) => {
  */
 export const verifyEmailTransport = async () => {
   try {
-    await transporter.verify();
-    console.log('📧 Email transport verified (Ethereal)');
+    if (process.env.EMAIL_HOST) {
+      await transporter.verify();
+      console.log('📧 Email transport verified (SMTP)');
+    } else {
+      console.log('📧 Email transport: direct mode (dummyinbox.com)');
+      console.log('   View emails at: https://dummyinbox.com/mail/<username>');
+    }
   } catch (error) {
     console.warn('⚠️  Email transport not available:', error.message);
   }

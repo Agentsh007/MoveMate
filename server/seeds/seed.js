@@ -47,8 +47,8 @@ async function seed() {
       DELETE FROM rental_agreements;
       DELETE FROM rental_visits;
       DELETE FROM booking_requests;
-      DELETE FROM bookings;
       DELETE FROM reviews;
+      DELETE FROM bookings;
       DELETE FROM property_rules;
       DELETE FROM property_amenities;
       DELETE FROM property_images;
@@ -71,7 +71,7 @@ async function seed() {
       const { rows } = await client.query(
         `INSERT INTO users (name, email, phone, password_hash, role, is_verified)
          VALUES ($1, $2, $3, $4, 'owner', true) RETURNING *`,
-        [`Owner ${i}`, `owner${i}@ethereal.email`, `+8801700000${i}0${i}`, passwordHash]
+        [`Owner ${i}`, `owner${i}@dummyinbox.com`, `+8801700000${i}0${i}`, passwordHash]
       );
       owners.push(rows[0]);
 
@@ -88,7 +88,7 @@ async function seed() {
       const { rows } = await client.query(
         `INSERT INTO users (name, email, phone, password_hash, role, is_verified)
          VALUES ($1, $2, $3, $4, 'user', true) RETURNING *`,
-        [`User ${i}`, `user${i}@ethereal.email`, `+8801800000${i}0${i}`, passwordHash]
+        [`User ${i}`, `user${i}@dummyinbox.com`, `+8801800000${i}0${i}`, passwordHash]
       );
       users.push(rows[0]);
 
@@ -336,8 +336,8 @@ async function seed() {
 
     console.log('\n✅ Seed completed successfully!\n');
     console.log('  📧 Test accounts (password: Test@1234):');
-    console.log('     Owners: owner1@ethereal.email → owner5@ethereal.email');
-    console.log('     Users:  user1@ethereal.email, user2@ethereal.email\n');
+    console.log('     Owners: owner1@dummyinbox.com → owner5@dummyinbox.com');
+    console.log('     Users:  user1@dummyinbox.com, user2@dummyinbox.com\n');
 
   } catch (error) {
     console.error('\n❌ Seed failed:', error.message);
