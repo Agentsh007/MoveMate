@@ -192,3 +192,32 @@
   font-family: 'DM Sans', sans-serif;
   border-radius: 10px;
 }
+
+/* ---- Mobile Responsiveness ---- */
+@media (max-width: 640px) {
+  .section { @apply py-8 px-4; }
+  h1 { @apply text-2xl; }
+  h2 { @apply text-xl; }
+
+  .btn-primary, .btn-secondary {
+    @apply px-4 py-2.5 text-sm;
+  }
+
+  /* Safe area for iPhone notch */
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Better touch targets on mobile */
+@media (hover: none) {
+  .card:hover { box-shadow: var(--shadow); }
+  button, a { -webkit-tap-highlight-color: transparent; }
+}
+
+/* Focus-visible for accessibility */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
