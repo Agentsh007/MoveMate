@@ -71,7 +71,7 @@
 
 ### 🔔 Notifications
 - In-app notification bell with unread count
-- Email notifications via Nodemailer (Ethereal Email for dev)
+- Email notifications via Nodemailer ([DummyInbox.com](https://dummyinbox.com) for dev)
 - Triggers: booking requests, confirmations, reviews, visits, payments
 
 ### 🔐 Authentication
@@ -198,7 +198,7 @@ curl http://localhost:5000/api/health
 # Login with seed account
 curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"owner1@ethereal.email","password":"Test@1234"}'
+  -d '{"email":"owner1@dummyinbox.com","password":"Test@1234"}'
 ```
 
 ---
@@ -226,12 +226,14 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-# Email (Ethereal for development)
-EMAIL_HOST=smtp.ethereal.email
+# Email — DummyInbox.com (no-password inbox for dev)
+# Leave HOST/USER/PASS empty to use direct transport
+# View emails at: https://dummyinbox.com/mail/<username>
+EMAIL_HOST=
 EMAIL_PORT=587
 EMAIL_SECURE=false
-EMAIL_USER=your_ethereal_user
-EMAIL_PASS=your_ethereal_pass
+EMAIL_USER=
+EMAIL_PASS=
 
 # Payment (stubbed)
 SSLCOMMERZ_STORE_ID=
@@ -495,7 +497,7 @@ server/
     ├── config/
     │   ├── db.js                 # PostgreSQL pool
     │   ├── cloudinary.js         # Image CDN
-    │   └── email.js              # Nodemailer (Ethereal)
+    │   └── email.js              # Nodemailer (DummyInbox)
     ├── middleware/
     │   ├── auth.js               # JWT + role guards
     │   ├── errorHandler.js       # Global error handler
@@ -577,8 +579,8 @@ After running `node seeds/seed.js`:
 
 | Email | Password | Role |
 |-------|----------|------|
-| `owner1@ethereal.email` – `owner5@ethereal.email` | `Test@1234` | Owner |
-| `user1@ethereal.email` – `user2@ethereal.email` | `Test@1234` | User |
+| `owner1@dummyinbox.com` – `owner5@dummyinbox.com` | `Test@1234` | Owner |
+| `user1@dummyinbox.com` – `user2@dummyinbox.com` | `Test@1234` | User |
 
 **Seed data includes:** 15 properties across all types, essential services (pharmacies, hospitals, banks in Dhaka), and emergency contacts.
 
@@ -586,11 +588,20 @@ After running `node seeds/seed.js`:
 
 ## 📧 Email Testing
 
-Development uses **Ethereal Email** (fake SMTP — emails are captured, never delivered).
+Development uses **[DummyInbox.com](https://dummyinbox.com)** — a free, no-password email inbox.
 
-1. Go to [https://ethereal.email/login](https://ethereal.email/login)
-2. Login with the credentials from your `server/.env`
-3. View all notification emails in the inbox
+**How it works:** All test accounts use `@dummyinbox.com` emails. To view received notifications:
+
+1. Go to `https://dummyinbox.com/mail/<username>`
+2. For example: [dummyinbox.com/mail/owner1](https://dummyinbox.com/mail/owner1)
+3. No login or password needed — just open the URL!
+
+| Account | Inbox URL |
+|---------|----------|
+| `owner1@dummyinbox.com` | [dummyinbox.com/mail/owner1](https://dummyinbox.com/mail/owner1) |
+| `user1@dummyinbox.com` | [dummyinbox.com/mail/user1](https://dummyinbox.com/mail/user1) |
+
+> 💡 For production, set `EMAIL_HOST`, `EMAIL_USER`, and `EMAIL_PASS` in `.env` to use a real SMTP provider (Gmail, SendGrid, etc.)
 
 ---
 
