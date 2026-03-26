@@ -10,7 +10,6 @@ import { z } from 'zod';
 import { Eye, EyeOff, UserPlus, Loader2, User, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../api/auth.api';
-import useAuthStore from '../../store/authStore';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -28,7 +27,6 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState('user');
   const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
 
   const {
     register,
@@ -49,8 +47,7 @@ export default function Register() {
         role: selectedRole,
       });
 
-      setAuth(data.user, data.accessToken, data.refreshToken);
-      toast.success(`Welcome to MoveMate, ${data.user.name}!`);
+      toast.success(`Welcome to MoveMate, ${data.data?.user?.name || formData.name}!`);
       navigate('/', { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');

@@ -1,22 +1,19 @@
 // =============================================
-// Seed Data — Development Test Data
+// Seed Data — Supabase Auth Compatible
 // =============================================
-// Creates realistic test data for Dhaka, Bangladesh:
+// Creates test data for Dhaka, Bangladesh:
+// - Creates users via Supabase Auth API (not direct DB insert)
 // - 5 owner accounts, 2 user accounts
-// - 15 properties across all types
-// - Images (Unsplash URLs), amenities, rules
-// - Reviews for each property
-// - Essential services (pharmacy, hospital, etc.)
-// - Emergency contacts (police, fire, ambulance, etc.)
+// - 15 properties, reviews, essentials, emergency contacts
 //
 // Run: cd server && node seeds/seed.js
 // =============================================
 
 import pg from 'pg';
-import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,21 +21,28 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const { Pool } = pg;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-// Dhaka coordinates reference
+// Supabase admin client for creating auth users
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
 const DHAKA_CENTER = { lat: 23.8103, lng: 90.4125 };
-
-// Generate slight coordinate variation around a center point
 const vary = (center, range = 0.03) => center + (Math.random() - 0.5) * range * 2;
 
 async function seed() {
   const client = await pool.connect();
 
   try {
-    console.log('\n🌱 Starting seed...\n');
+    console.log('\n🌱 Starting seed (Supabase Auth mode)...\n');
 
-    // Clean existing data (reverse order of dependencies)
+    // Clean existing data (reverse FK order)
     await client.query(`
       DELETE FROM moving_waitlist;
       DELETE FROM saved_listings;
@@ -62,16 +66,37 @@ async function seed() {
     `);
     console.log('  🗑️  Cleared existing data');
 
-    // Hash password once (same for all test accounts)
-    const passwordHash = await bcrypt.hash('Test@1234', 12);
+    // Clean Supabase Auth users (delete all existing test users)
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    for (const u of (existingUsers?.users || [])) {
+      await supabaseAdmin.auth.admin.deleteUser(u.id);
+    }
+    console.log('  🗑️  Cleared Supabase Auth users');
+
+    const TEST_PASSWORD = 'Test@1234';
 
     // ===================== USERS =====================
     const owners = [];
     for (let i = 1; i <= 5; i++) {
+      const email = `owner${i}@dummyinbox.com`;
+
+      // Create in Supabase Auth
+      const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: TEST_PASSWORD,
+        email_confirm: true,
+      });
+
+      if (authErr) {
+        console.error(`  ❌ Failed to create auth user ${email}:`, authErr.message);
+        continue;
+      }
+
+      // Create in our users table
       const { rows } = await client.query(
-        `INSERT INTO users (name, email, phone, password_hash, role, is_verified)
-         VALUES ($1, $2, $3, $4, 'owner', true) RETURNING *`,
-        [`Owner ${i}`, `owner${i}@dummyinbox.com`, `+8801700000${i}0${i}`, passwordHash]
+        `INSERT INTO users (name, email, phone, role, is_verified, auth_id)
+         VALUES ($1, $2, $3, 'owner', true, $4) RETURNING *`,
+        [`Owner ${i}`, email, `+8801700000${i}0${i}`, authData.user.id]
       );
       owners.push(rows[0]);
 
@@ -81,14 +106,27 @@ async function seed() {
         [rows[0].id, `https://i.pravatar.cc/150?img=${i + 10}`, vary(DHAKA_CENTER.lat), vary(DHAKA_CENTER.lng)]
       );
     }
-    console.log('  👤 Created 5 owner accounts');
+    console.log('  👤 Created 5 owner accounts (Supabase Auth)');
 
     const users = [];
     for (let i = 1; i <= 2; i++) {
+      const email = `user${i}@dummyinbox.com`;
+
+      const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: TEST_PASSWORD,
+        email_confirm: true,
+      });
+
+      if (authErr) {
+        console.error(`  ❌ Failed to create auth user ${email}:`, authErr.message);
+        continue;
+      }
+
       const { rows } = await client.query(
-        `INSERT INTO users (name, email, phone, password_hash, role, is_verified)
-         VALUES ($1, $2, $3, $4, 'user', true) RETURNING *`,
-        [`User ${i}`, `user${i}@dummyinbox.com`, `+8801800000${i}0${i}`, passwordHash]
+        `INSERT INTO users (name, email, phone, role, is_verified, auth_id)
+         VALUES ($1, $2, $3, 'user', true, $4) RETURNING *`,
+        [`User ${i}`, email, `+8801800000${i}0${i}`, authData.user.id]
       );
       users.push(rows[0]);
 
@@ -98,33 +136,27 @@ async function seed() {
         [rows[0].id, `https://i.pravatar.cc/150?img=${i + 20}`, vary(DHAKA_CENTER.lat), vary(DHAKA_CENTER.lng)]
       );
     }
-    console.log('  👤 Created 2 user accounts');
+    console.log('  👤 Created 2 user accounts (Supabase Auth)');
 
     // ===================== PROPERTIES =====================
     const propertyData = [
-      // 3 Hotels
       { title: 'Grand Dhaka Hotel & Suites', type: 'hotel', model: 'hotel_style', price: 3500, unit: 'per_night', area: 'Gulshan', beds: 1, baths: 1, guests: 2, sqft: 450 },
       { title: 'Banani Boutique Hotel', type: 'hotel', model: 'hotel_style', price: 5000, unit: 'per_night', area: 'Banani', beds: 2, baths: 1, guests: 4, sqft: 650 },
       { title: 'Dhanmondi Garden Inn', type: 'hotel', model: 'hotel_style', price: 2500, unit: 'per_night', area: 'Dhanmondi', beds: 1, baths: 1, guests: 2, sqft: 350 },
-      // 4 Flats
       { title: 'Modern 3-Bed Flat in Uttara', type: 'flat', model: 'long_term', price: 25000, unit: 'per_month', area: 'Uttara', beds: 3, baths: 2, guests: 6, sqft: 1200 },
       { title: 'Cozy 2-Bed Flat, Mirpur', type: 'flat', model: 'long_term', price: 15000, unit: 'per_month', area: 'Mirpur', beds: 2, baths: 1, guests: 4, sqft: 900 },
       { title: 'Luxury Flat with Lake View', type: 'flat', model: 'long_term', price: 40000, unit: 'per_month', area: 'Gulshan', beds: 3, baths: 2, guests: 5, sqft: 1600 },
       { title: 'Affordable Bachelor Flat', type: 'flat', model: 'long_term', price: 8000, unit: 'per_month', area: 'Mohammadpur', beds: 1, baths: 1, guests: 2, sqft: 500 },
-      // 3 Apartments
       { title: 'Serviced Apartment Banani', type: 'apartment', model: 'short_term', price: 4500, unit: 'per_night', area: 'Banani', beds: 2, baths: 2, guests: 4, sqft: 1000, instant: true },
       { title: 'Executive Apartment Gulshan', type: 'apartment', model: 'short_term', price: 6000, unit: 'per_night', area: 'Gulshan', beds: 3, baths: 2, guests: 6, sqft: 1400, instant: false },
       { title: 'Studio Apartment Dhanmondi', type: 'apartment', model: 'short_term', price: 2000, unit: 'per_night', area: 'Dhanmondi', beds: 1, baths: 1, guests: 2, sqft: 400, instant: true },
-      // 3 Sublets
       { title: 'Sublet Room near BUET', type: 'sublet', model: 'short_term', price: 1500, unit: 'per_night', area: 'Old Dhaka', beds: 1, baths: 1, guests: 1, sqft: 200, instant: true },
       { title: 'Furnished Sublet in Uttara', type: 'sublet', model: 'short_term', price: 2000, unit: 'per_night', area: 'Uttara', beds: 1, baths: 1, guests: 2, sqft: 300, instant: false },
       { title: 'Shared Sublet for Students', type: 'sublet', model: 'short_term', price: 800, unit: 'per_night', area: 'Nilkhet', beds: 1, baths: 1, guests: 1, sqft: 150, instant: true },
-      // 2 To-lets
       { title: 'Family House To-Let Mirpur', type: 'tolet', model: 'long_term', price: 20000, unit: 'per_month', area: 'Mirpur', beds: 4, baths: 2, guests: 8, sqft: 1800 },
       { title: 'Commercial Space To-Let Motijheel', type: 'tolet', model: 'long_term', price: 50000, unit: 'per_month', area: 'Motijheel', beds: 0, baths: 1, guests: 10, sqft: 2000 },
     ];
 
-    // Unsplash image URLs for properties
     const imageUrls = [
       'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
@@ -134,33 +166,20 @@ async function seed() {
     ];
 
     const amenityOptions = ['WiFi', 'AC', 'Parking', 'Kitchen', 'Elevator', 'Generator', 'Security', 'Laundry', 'Rooftop', 'Gym', 'Pool', 'CCTV', 'Balcony', 'Furnished'];
-    const ruleOptions = [
-      'No smoking inside',
-      'No pets allowed',
-      'Quiet hours after 10 PM',
-      'No parties or events',
-      'Shoes off inside',
-      'Keep common areas clean',
-    ];
+    const ruleOptions = ['No smoking inside', 'No pets allowed', 'Quiet hours after 10 PM', 'No parties or events', 'Shoes off inside', 'Keep common areas clean'];
+
+    const areaCoords = {
+      'Gulshan': { lat: 23.7925, lng: 90.4078 }, 'Banani': { lat: 23.7937, lng: 90.4028 },
+      'Dhanmondi': { lat: 23.7465, lng: 90.3760 }, 'Uttara': { lat: 23.8759, lng: 90.3795 },
+      'Mirpur': { lat: 23.8040, lng: 90.3653 }, 'Mohammadpur': { lat: 23.7662, lng: 90.3586 },
+      'Old Dhaka': { lat: 23.7120, lng: 90.4070 }, 'Nilkhet': { lat: 23.7332, lng: 90.3909 },
+      'Motijheel': { lat: 23.7333, lng: 90.4185 },
+    };
 
     const properties = [];
     for (let i = 0; i < propertyData.length; i++) {
       const pd = propertyData[i];
       const owner = owners[i % owners.length];
-
-      // Vary coordinates based on area
-      const areaCoords = {
-        'Gulshan': { lat: 23.7925, lng: 90.4078 },
-        'Banani': { lat: 23.7937, lng: 90.4028 },
-        'Dhanmondi': { lat: 23.7465, lng: 90.3760 },
-        'Uttara': { lat: 23.8759, lng: 90.3795 },
-        'Mirpur': { lat: 23.8040, lng: 90.3653 },
-        'Mohammadpur': { lat: 23.7662, lng: 90.3586 },
-        'Old Dhaka': { lat: 23.7120, lng: 90.4070 },
-        'Nilkhet': { lat: 23.7332, lng: 90.3909 },
-        'Motijheel': { lat: 23.7333, lng: 90.4185 },
-      };
-
       const coords = areaCoords[pd.area] || DHAKA_CENTER;
 
       const { rows } = await client.query(
@@ -175,15 +194,13 @@ async function seed() {
           pd.type, pd.model,
           `House ${i + 1}, Road ${Math.floor(Math.random() * 20) + 1}, ${pd.area}, Dhaka`,
           vary(coords.lat, 0.01), vary(coords.lng, 0.01),
-          pd.beds, pd.baths, pd.sqft, pd.guests,
-          pd.price, pd.unit, pd.instant || false,
+          pd.beds, pd.baths, pd.sqft, pd.guests, pd.price, pd.unit, pd.instant || false,
         ]
       );
 
       const property = rows[0];
       properties.push(property);
 
-      // Add 5 images per property
       for (let j = 0; j < 5; j++) {
         await client.query(
           `INSERT INTO property_images (property_id, url, is_primary, display_order) VALUES ($1, $2, $3, $4)`,
@@ -191,32 +208,30 @@ async function seed() {
         );
       }
 
-      // Add 3 random amenities
       const shuffled = [...amenityOptions].sort(() => 0.5 - Math.random());
       for (let j = 0; j < 3; j++) {
-        await client.query(
-          `INSERT INTO property_amenities (property_id, name) VALUES ($1, $2)`,
-          [property.id, shuffled[j]]
-        );
+        await client.query(`INSERT INTO property_amenities (property_id, name) VALUES ($1, $2)`, [property.id, shuffled[j]]);
       }
 
-      // Add 2 rules
       for (let j = 0; j < 2; j++) {
-        await client.query(
-          `INSERT INTO property_rules (property_id, rule_text) VALUES ($1, $2)`,
-          [property.id, ruleOptions[j % ruleOptions.length]]
-        );
+        await client.query(`INSERT INTO property_rules (property_id, rule_text) VALUES ($1, $2)`, [property.id, ruleOptions[j]]);
       }
     }
     console.log(`  🏠 Created ${properties.length} properties with images, amenities, and rules`);
 
     // ===================== BOOKINGS & REVIEWS =====================
-    // Create some bookings and reviews
+    const comments = [
+      'Great place! Very clean and well maintained.',
+      'Excellent location, friendly owner. Would stay again!',
+      'Very comfortable and spacious. Highly recommended.',
+      'Perfect for families. All amenities as described.',
+      'Good value for money. Nice neighborhood.',
+    ];
+
     for (let i = 0; i < properties.length; i++) {
       const property = properties[i];
       const user = users[i % users.length];
 
-      // Create a completed booking
       const { rows: bookingRows } = await client.query(
         `INSERT INTO bookings (property_id, user_id, booking_type, check_in, check_out, guests, total_price, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'completed') RETURNING *`,
@@ -227,16 +242,7 @@ async function seed() {
         ]
       );
 
-      // Add a review for each property
-      const rating = Math.floor(Math.random() * 2) + 4; // 4 or 5 stars
-      const comments = [
-        'Great place! Very clean and well maintained.',
-        'Excellent location, friendly owner. Would stay again!',
-        'Very comfortable and spacious. Highly recommended.',
-        'Perfect for families. All amenities as described.',
-        'Good value for money. Nice neighborhood.',
-      ];
-
+      const rating = Math.floor(Math.random() * 2) + 4;
       await client.query(
         `INSERT INTO reviews (property_id, reviewer_id, booking_id, rating, comment) VALUES ($1, $2, $3, $4, $5)`,
         [property.id, user.id, bookingRows[0].id, rating, comments[i % comments.length]]
@@ -244,7 +250,7 @@ async function seed() {
     }
     console.log('  📝 Created bookings and reviews');
 
-    // ===================== ESSENTIAL CATEGORIES =====================
+    // ===================== ESSENTIALS =====================
     const essentialCategoryData = [
       { name: 'Pharmacy', icon: 'Pill', color: '#10B981', order: 1 },
       { name: 'Grocery', icon: 'ShoppingCart', color: '#F59E0B', order: 2 },
@@ -264,21 +270,15 @@ async function seed() {
     }
     console.log('  📂 Created essential categories');
 
-    // ===================== ESSENTIAL SERVICES =====================
     const essentialServiceData = [
-      // Pharmacies
       { catIdx: 0, name: 'Lazz Pharma Gulshan', addr: 'Gulshan-2, Dhaka', lat: 23.7940, lng: 90.4140, phone: '+880-2-9852856' },
       { catIdx: 0, name: 'Square Pharmacy Dhanmondi', addr: 'Dhanmondi 27, Dhaka', lat: 23.7465, lng: 90.3760, phone: '+880-2-9116285' },
-      // Groceries
       { catIdx: 1, name: 'Shwapno Banani', addr: 'Banani 11, Dhaka', lat: 23.7937, lng: 90.4020, phone: '+880-2-55036700' },
       { catIdx: 1, name: 'Agora Gulshan', addr: 'Gulshan-1, Dhaka', lat: 23.7817, lng: 90.4170, phone: '+880-2-8818088' },
-      // Hospitals
       { catIdx: 2, name: 'United Hospital', addr: 'Gulshan-2, Dhaka', lat: 23.7960, lng: 90.4143, phone: '+880-2-8836000' },
       { catIdx: 2, name: 'Square Hospital', addr: 'Panthapath, Dhaka', lat: 23.7517, lng: 90.3868, phone: '+880-2-8159457' },
-      // Banks
       { catIdx: 3, name: 'DBBL ATM Gulshan', addr: 'Gulshan-1 Circle, Dhaka', lat: 23.7810, lng: 90.4150, phone: '+880-2-8331515' },
       { catIdx: 3, name: 'BRAC Bank Uttara', addr: 'Uttara Sector 3, Dhaka', lat: 23.8720, lng: 90.3798, phone: '+880-2-8837775' },
-      // Restaurants
       { catIdx: 4, name: 'Star Kabab Dhanmondi', addr: 'Dhanmondi 15, Dhaka', lat: 23.7470, lng: 90.3745, phone: '+880-2-9114450' },
       { catIdx: 4, name: 'Kacchi Bhai Mirpur', addr: 'Mirpur 10, Dhaka', lat: 23.8095, lng: 90.3680, phone: '+880-1711234567' },
     ];
@@ -292,7 +292,7 @@ async function seed() {
     }
     console.log('  🏪 Created essential services');
 
-    // ===================== EMERGENCY CATEGORIES =====================
+    // ===================== EMERGENCY =====================
     const emergCategoryData = [
       { name: 'Police', icon: 'Shield', color: '#1E40AF', priority: 1 },
       { name: 'Fire Service', icon: 'Flame', color: '#DC2626', priority: 2 },
@@ -313,23 +313,31 @@ async function seed() {
     }
     console.log('  📂 Created emergency categories');
 
-    // ===================== EMERGENCY CONTACTS =====================
     const emergContactData = [
-      { catIdx: 0, name: 'Gulshan Police Station', phone1: '999', phone2: '+880-2-9890025', addr: 'Gulshan-2, Dhaka', lat: 23.7928, lng: 90.4148 },
-      { catIdx: 0, name: 'Banani Police Station', phone1: '999', phone2: '+880-2-9874125', addr: 'Banani, Dhaka', lat: 23.7945, lng: 90.4015 },
-      { catIdx: 1, name: 'Dhaka Fire Station (Central)', phone1: '199', phone2: '+880-2-9555555', addr: 'Sadarghat, Dhaka', lat: 23.7082, lng: 90.4070 },
-      { catIdx: 2, name: 'National Ambulance Service', phone1: '199', phone2: '+880-1777777799', addr: 'Dhaka', lat: 23.8103, lng: 90.4125 },
-      { catIdx: 2, name: 'Red Crescent Ambulance', phone1: '+880-2-9116563', phone2: null, addr: 'Mohakhali, Dhaka', lat: 23.7780, lng: 90.4050 },
-      { catIdx: 3, name: 'Titas Gas Emergency', phone1: '16496', phone2: '+880-2-8900012', addr: 'Dhaka', lat: 23.8103, lng: 90.4125 },
-      { catIdx: 4, name: 'National Women Helpline', phone1: '10921', phone2: '+880-2-8900021', addr: 'Dhaka (Nationwide)', lat: 23.8103, lng: 90.4125 },
-      { catIdx: 5, name: 'Child Helpline Bangladesh', phone1: '1098', phone2: null, addr: 'Dhaka (Nationwide)', lat: 23.8103, lng: 90.4125 },
+      // Dhaka
+      { catIdx: 0, name: 'Gulshan Police Station', phone1: '999', phone2: '+880-2-9890025', addr: 'Gulshan-2, Dhaka', lat: 23.7928, lng: 90.4148, city: 'Dhaka' },
+      { catIdx: 0, name: 'Banani Police Station', phone1: '999', phone2: '+880-2-9874125', addr: 'Banani, Dhaka', lat: 23.7945, lng: 90.4015, city: 'Dhaka' },
+      { catIdx: 1, name: 'Dhaka Fire Station (Central)', phone1: '199', phone2: '+880-2-9555555', addr: 'Sadarghat, Dhaka', lat: 23.7082, lng: 90.4070, city: 'Dhaka' },
+      { catIdx: 2, name: 'National Ambulance Service', phone1: '199', phone2: '+880-1777777799', addr: 'Dhaka', lat: 23.8103, lng: 90.4125, city: 'Dhaka' },
+      { catIdx: 2, name: 'Red Crescent Ambulance', phone1: '+880-2-9116563', phone2: null, addr: 'Mohakhali, Dhaka', lat: 23.7780, lng: 90.4050, city: 'Dhaka' },
+      // Rajshahi
+      { catIdx: 0, name: 'Katakhali Police Station', phone1: '999', phone2: '+880-721-772224', addr: 'Rajshahi', lat: 24.3739, lng: 88.6011, city: 'Rajshahi' },
+      { catIdx: 2, name: 'Rajshahi Medical College Hospital', phone1: '+880-721-776009', phone2: null, addr: 'Rajshahi City', lat: 24.3746, lng: 88.5960, city: 'Rajshahi' },
+      { catIdx: 1, name: 'Rajshahi Fire Service', phone1: '199', phone2: '+880-721-775000', addr: 'Rajshahi Fire Station', lat: 24.3700, lng: 88.6050, city: 'Rajshahi' },
+      // Chittagong
+      { catIdx: 0, name: 'Kotwali Police Station', phone1: '999', phone2: '+880-31-619922', addr: 'Chittagong', lat: 22.3384, lng: 91.8317, city: 'Chittagong' },
+      { catIdx: 2, name: 'Chittagong Medical College Hospital', phone1: '+880-31-616891', phone2: null, addr: 'Chittagong City', lat: 22.3569, lng: 91.8340, city: 'Chittagong' },
+      // Nationwide
+      { catIdx: 3, name: 'Titas Gas Emergency', phone1: '16496', phone2: '+880-2-8900012', addr: 'Nationwide', lat: 23.8103, lng: 90.4125, city: 'Dhaka' },
+      { catIdx: 4, name: 'National Women Helpline', phone1: '109', phone2: '+880-2-8900021', addr: 'Nationwide', lat: 23.8103, lng: 90.4125, city: 'Dhaka' },
+      { catIdx: 5, name: 'Child Helpline Bangladesh', phone1: '1098', phone2: null, addr: 'Nationwide', lat: 23.8103, lng: 90.4125, city: 'Dhaka' },
     ];
 
     for (const ec of emergContactData) {
       await client.query(
         `INSERT INTO emergency_contacts (category_id, name, phone_primary, phone_secondary, address, latitude, longitude, city)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'Dhaka')`,
-        [emergCategories[ec.catIdx].id, ec.name, ec.phone1, ec.phone2, ec.addr, ec.lat, ec.lng]
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [emergCategories[ec.catIdx].id, ec.name, ec.phone1, ec.phone2, ec.addr, ec.lat, ec.lng, ec.city]
       );
     }
     console.log('  🚨 Created emergency contacts');
@@ -337,7 +345,8 @@ async function seed() {
     console.log('\n✅ Seed completed successfully!\n');
     console.log('  📧 Test accounts (password: Test@1234):');
     console.log('     Owners: owner1@dummyinbox.com → owner5@dummyinbox.com');
-    console.log('     Users:  user1@dummyinbox.com, user2@dummyinbox.com\n');
+    console.log('     Users:  user1@dummyinbox.com, user2@dummyinbox.com');
+    console.log('     🔐 Auth managed by Supabase — check Dashboard → Authentication\n');
 
   } catch (error) {
     console.error('\n❌ Seed failed:', error.message);

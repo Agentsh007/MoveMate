@@ -26,9 +26,10 @@ const { Pool } = pg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
   max: 20,                        // Maximum connections in pool
   idleTimeoutMillis: 30000,       // Close idle connections after 30s
-  connectionTimeoutMillis: 2000,  // Timeout if can't connect in 2s
+  connectionTimeoutMillis: 5000,  // Timeout if can't connect in 5s
 });
 
 // Log when pool connects (helpful for debugging)

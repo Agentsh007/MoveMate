@@ -24,6 +24,7 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const UserDashboard = lazy(() => import('./pages/dashboard/UserDashboard'));
 const OwnerDashboard = lazy(() => import('./pages/dashboard/OwnerDashboard'));
 const AddListing = lazy(() => import('./pages/owner/AddListing'));
+const BookingDetail = lazy(() => import('./pages/dashboard/BookingDetail'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // React Query client — caches API responses
@@ -61,6 +62,9 @@ export default function App() {
                 {/* Protected */}
                 <Route path="/dashboard" element={
                   <ProtectedRoute><UserDashboard /></ProtectedRoute>
+                } />
+                <Route path="/bookings/:id" element={
+                  <ProtectedRoute><BookingDetail /></ProtectedRoute>
                 } />
 
                 {/* Owner Only */}

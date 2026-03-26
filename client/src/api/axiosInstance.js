@@ -1,74 +1,53 @@
 // =============================================
-// Axios Instance with JWT Interceptors
+// Axios Instance — Supabase Token Integration
 // =============================================
-// HOW INTERCEPTORS WORK:
-// 1. REQUEST interceptor: Before every API call, automatically
-//    attaches the JWT token from Zustand auth store
-// 2. RESPONSE interceptor: If any API call returns 401 (token expired),
-//    automatically tries to refresh the token. If refresh fails, logs out.
-//
-// This means your API functions never have to manually handle tokens.
+// Gets the access token from Supabase Auth session instead of localStorage.
+// Supabase SDK handles token refresh automatically.
 // =============================================
 
 import axios from 'axios';
-import useAuthStore from '../store/authStore';
+import supabase from '../lib/supabase';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// REQUEST interceptor — attach token to every request
-api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().token;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor — attach Supabase auth token
+api.interceptors.request.use(async (config) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
     }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+  } catch (err) {
+    console.error('Failed to get session:', err);
+  }
+  return config;
+});
 
-// RESPONSE interceptor — handle 401 errors (token expired)
+// Response interceptor — handle 401 by refreshing session
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If 401 and we haven't already tried to refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      const refreshToken = useAuthStore.getState().refreshToken;
+      try {
+        // Supabase auto-refreshes the token
+        const { data: { session } } = await supabase.auth.refreshSession();
 
-      if (refreshToken) {
-        try {
-          // Try to get a new access token
-          const { data } = await axios.post(
-            `${import.meta.env.VITE_API_URL}/auth/refresh`,
-            { refreshToken }
-          );
-
-          // Update the store with new token
-          useAuthStore.getState().setToken(data.accessToken);
-
-          // Retry the original request with new token
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        if (session?.access_token) {
+          originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
           return api(originalRequest);
-        } catch (refreshError) {
-          // Refresh failed — log out
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
         }
-      } else {
-        // No refresh token — log out
-        useAuthStore.getState().logout();
+      } catch (refreshError) {
+        // Session expired completely — sign out
+        await supabase.auth.signOut();
         window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
 

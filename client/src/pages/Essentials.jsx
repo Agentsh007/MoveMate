@@ -2,62 +2,213 @@
 // Essentials Page — Split-View Map + Service List
 // =============================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import {
-  Search, MapPin, Loader2, Phone, Clock, Navigation,
-  Building2, Stethoscope, Landmark, Fuel, UtensilsCrossed, ShoppingBag, X
+  MapPin, Phone, Clock, Navigation, Crosshair,
+  Building2, Stethoscope, Landmark, Fuel, UtensilsCrossed, ShoppingBag
 } from 'lucide-react';
-import { essentialsAPI } from '../api/location.api';
+import { createRoot } from 'react-dom/client';
 import { DHAKA_CENTER } from '../utils/constants';
+import { EssentialsListSkeleton } from '../components/shared/LoadingSkeleton';
+import { fetchOverpassData, calculateDistance, getAddressFromCoords } from '../api/overpass.api';
 
-const CATEGORY_ICONS = {
-  Hospital: Stethoscope, Pharmacy: ShoppingBag, Bank: Landmark,
-  Restaurant: UtensilsCrossed, 'Fuel Station': Fuel, Default: Building2,
+const OSM_CATEGORIES = [
+  { id: 'hospital', name: 'Hospital', icon: Stethoscope, query: 'node["amenity"~"hospital|clinic"]({{bbox}});' },
+  { id: 'pharmacy', name: 'Pharmacy', icon: ShoppingBag, query: 'node["amenity"="pharmacy"]({{bbox}});' },
+  { id: 'bank', name: 'Bank & ATM', icon: Landmark, query: 'node["amenity"~"bank|atm"]({{bbox}});' },
+  { id: 'restaurant', name: 'Restaurant', icon: UtensilsCrossed, query: 'node["amenity"~"restaurant|cafe|fast_food"]({{bbox}});' },
+  { id: 'supermarket', name: 'Supermarket', icon: ShoppingBag, query: 'node["shop"~"supermarket|convenience|grocery"]({{bbox}});' },
+  { id: 'fuel', name: 'Fuel Station', icon: Fuel, query: 'node["amenity"="fuel"]({{bbox}});' },
+];
+
+const DEFAULT_ICON = Building2;
+
+const CATEGORY_COLORS = {
+  hospital: '#EF4444', // Red
+  pharmacy: '#EF4444', // Red
+  restaurant: '#F97316', // Orange
+  supermarket: '#3B82F6', // Blue
+  bank: '#A855F7', // Purple
+  fuel: '#EAB308', // Yellow
+  default: '#6B7280' // Gray
 };
 
-function RecenterMap({ lat, lng }) {
+const getMarkerIcon = (categoryId) => {
+  const color = CATEGORY_COLORS[categoryId] || CATEGORY_COLORS.default;
+  return L.divIcon({
+    className: 'custom-pin-icon',
+    html: `<svg width="36" height="36" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3)); transform: translateY(-4px);">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+      <circle cx="12" cy="10" r="3" fill="white" stroke="none"></circle>
+    </svg>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -36]
+  });
+};
+
+function MapController({ selectedService, markerRefs, userLocation }) {
   const map = useMap();
+  
   useEffect(() => {
-    if (lat && lng) map.flyTo([lat, lng], 14, { animate: true });
-  }, [lat, lng, map]);
+    if (selectedService && markerRefs.current[selectedService.id]) {
+      const marker = markerRefs.current[selectedService.id];
+      // Fly to zoom level 18 for max clarity
+      map.flyTo([selectedService.latitude, selectedService.longitude], 18, { animate: true, duration: 1.2 });
+      
+      const timeout = setTimeout(() => {
+        if (markerRefs.current[selectedService.id]) {
+          markerRefs.current[selectedService.id].openPopup();
+        }
+      }, 1250); // slight delay to allow flyTo to finish settling
+      
+      return () => clearTimeout(timeout);
+    } else if (!selectedService && userLocation) {
+      map.flyTo([userLocation.lat, userLocation.lng], 13, { animate: true });
+    }
+  }, [selectedService, map, markerRefs, userLocation]);
+  
   return null;
 }
 
+function LocateMeControl({ setUserLocation }) {
+  const map = useMap();
+  useEffect(() => {
+    const control = L.control({ position: 'topright' });
+    control.onAdd = function () {
+      const container = L.DomUtil.create('div', 'locate-me-control');
+      L.DomEvent.disableClickPropagation(container);
+      const root = createRoot(container);
+      root.render(
+        <button
+          className="locate-me-btn"
+          title="Re-center on my location"
+          onClick={() => {
+            navigator.geolocation?.getCurrentPosition(
+              (pos) => {
+                const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                setUserLocation(loc);
+                map.flyTo([loc.lat, loc.lng], 14, { animate: true, duration: 1 });
+              },
+              () => {},
+              { maximumAge: 0, timeout: 10000, enableHighAccuracy: true }
+            );
+          }}
+        >
+          <Crosshair size={18} />
+        </button>
+      );
+      return container;
+    };
+    control.addTo(map);
+    return () => control.remove();
+  }, [map, setUserLocation]);
+  return null;
+}
+
+function AddressDisplay({ address, lat, lng }) {
+  const [displayAddress, setDisplayAddress] = useState(address);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (address === 'Address not available' && lat && lng) {
+      setLoading(true);
+      getAddressFromCoords(lat, lng).then(res => {
+        if (res) setDisplayAddress(res);
+        setLoading(false);
+      });
+    } else {
+      setDisplayAddress(address);
+    }
+  }, [address, lat, lng]);
+
+  return (
+    <p className="text-xs text-muted mt-0.5 flex items-start gap-1">
+      <MapPin size={11} className="mt-0.5 shrink-0" /> 
+      {loading ? <span className="animate-pulse">Loading exact address...</span> : <span className="line-clamp-2 leading-relaxed">{displayAddress}</span>}
+    </p>
+  );
+}
+
 export default function Essentials() {
-  const [categories, setCategories] = useState([]);
+  const [categories] = useState(OSM_CATEGORIES);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchRadius, setSearchRadius] = useState(5);
   const [userLocation, setUserLocation] = useState(DHAKA_CENTER);
   const [selectedService, setSelectedService] = useState(null);
+  const markerRefs = useRef({});
 
-  // Get user location
+  // Get user location with cached GPS and high accuracy (longer timeout to allow permission grant)
   useEffect(() => {
+    const options = { maximumAge: 60000, timeout: 10000, enableHighAccuracy: true };
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => console.log('Location denied, using Dhaka center')
+      (err) => {
+        console.warn('Geolocation error or timeout, using fallback location:', err);
+        // fallback already set to DHAKA_CENTER
+      },
+      options
     );
-  }, []);
-
-  // Fetch categories
-  useEffect(() => {
-    essentialsAPI.getCategories().then(({ data }) => setCategories(data.categories || [])).catch(console.error);
   }, []);
 
   // Fetch nearby services
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {
-        lat: userLocation.lat,
-        lng: userLocation.lng,
-        radius: searchRadius,
-      };
-      if (selectedCategory) params.category = selectedCategory;
-      const { data } = await essentialsAPI.getNearby(params);
-      setServices(data.services || []);
+      let queryBody = '';
+      if (selectedCategory) {
+        const cat = OSM_CATEGORIES.find(c => c.id === selectedCategory);
+        if (cat) queryBody = cat.query;
+      } else {
+        queryBody = OSM_CATEGORIES.map(c => c.query).join('\n');
+      }
+
+      const elements = await fetchOverpassData(userLocation.lat, userLocation.lng, searchRadius, queryBody);
+      
+      const parsedServices = elements
+        .filter(el => el.type === 'node' && el.tags)
+        .map(el => {
+          const tags = el.tags;
+          let catName = 'Service';
+          let catId = 'default';
+          let Icon = DEFAULT_ICON;
+          
+          if (tags.amenity && tags.amenity.match(/hospital|clinic/)) { catName = 'Hospital'; catId = 'hospital'; Icon = Stethoscope; }
+          else if (tags.amenity === 'pharmacy') { catName = 'Pharmacy'; catId = 'pharmacy'; Icon = ShoppingBag; }
+          else if (tags.amenity && tags.amenity.match(/bank|atm/)) { catName = tags.amenity==='atm'?'ATM':'Bank'; catId = 'bank'; Icon = Landmark; }
+          else if (tags.amenity && tags.amenity.match(/restaurant|cafe|fast_food/)) { catName = 'Restaurant'; catId = 'restaurant'; Icon = UtensilsCrossed; }
+          else if (tags.shop && tags.shop.match(/supermarket|convenience|grocery/)) { catName = 'Supermarket'; catId = 'supermarket'; Icon = ShoppingBag; }
+          else if (tags.amenity === 'fuel') { catName = 'Fuel Station'; catId = 'fuel'; Icon = Fuel; }
+          
+          const name = tags.name || tags.operator || tags.brand || `${catName} (Unnamed)`;
+          const addressParts = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']].filter(Boolean);
+          const address = addressParts.length > 0 ? addressParts.join(', ') : 'Address not available';
+
+          return {
+            id: el.id,
+            name,
+            category_id: catId,
+            category_name: catName,
+            icon: Icon,
+            latitude: el.lat,
+            longitude: el.lon,
+            address,
+            phone: tags.phone || tags['contact:phone'] || null,
+            operating_hours: tags.opening_hours || null,
+            distance_km: calculateDistance(userLocation.lat, userLocation.lng, el.lat, el.lon)
+          };
+        })
+        .filter(s => s.distance_km <= searchRadius)
+        .sort((a,b) => a.distance_km - b.distance_km);
+
+      // Reset marker refs on new fetch
+      markerRefs.current = {};
+      setServices(parsedServices);
     } catch (err) {
       console.error('Failed to fetch essentials:', err);
     } finally {
@@ -68,11 +219,6 @@ export default function Essentials() {
   useEffect(() => {
     fetchServices();
   }, [fetchServices]);
-
-  const getIcon = (categoryName) => {
-    const Icon = CATEGORY_ICONS[categoryName] || CATEGORY_ICONS.Default;
-    return Icon;
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,7 +244,7 @@ export default function Essentials() {
               All
             </button>
             {categories.map((cat) => {
-              const Icon = getIcon(cat.name);
+              const Icon = cat.icon;
               return (
                 <button
                   key={cat.id}
@@ -140,17 +286,17 @@ export default function Essentials() {
             </p>
 
             {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 size={28} className="animate-spin text-primary" />
+              <div className="py-2">
+                <EssentialsListSkeleton count={4} />
               </div>
             ) : services.length > 0 ? (
               services.map((s) => {
-                const Icon = getIcon(s.category_name);
+                const Icon = s.icon || DEFAULT_ICON;
                 return (
                   <div
                     key={s.id}
                     onClick={() => setSelectedService(s)}
-                    className={`bg-white rounded-xl border p-4 cursor-pointer transition-all hover:shadow-card ${
+                    className={`bg-white rounded-xl border p-4 cursor-pointer transition-all animate-fade-in hover:shadow-card ${
                       selectedService?.id === s.id ? 'border-primary ring-2 ring-primary/10' : 'border-border'
                     }`}
                   >
@@ -160,9 +306,7 @@ export default function Essentials() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-sm text-gray-900">{s.name}</h3>
-                        <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
-                          <MapPin size={11} /> {s.address}
-                        </p>
+                        <AddressDisplay address={s.address} lat={s.latitude} lng={s.longitude} />
                         <div className="flex items-center gap-3 mt-2">
                           {s.phone && (
                             <a href={`tel:${s.phone}`} onClick={(e) => e.stopPropagation()}
@@ -207,10 +351,12 @@ export default function Essentials() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <RecenterMap
-                lat={selectedService?.latitude || userLocation.lat}
-                lng={selectedService?.longitude || userLocation.lng}
+              <MapController
+                selectedService={selectedService}
+                markerRefs={markerRefs}
+                userLocation={userLocation}
               />
+              <LocateMeControl setUserLocation={setUserLocation} />
 
               {/* User marker */}
               <Marker position={[userLocation.lat, userLocation.lng]}>
@@ -218,17 +364,37 @@ export default function Essentials() {
               </Marker>
 
               {/* Service markers */}
-              {services.map((s) => s.latitude && s.longitude && (
-                <Marker key={s.id} position={[parseFloat(s.latitude), parseFloat(s.longitude)]}>
-                  <Popup>
-                    <div className="text-sm">
-                      <strong>{s.name}</strong>
-                      <br /><span className="text-gray-500">{s.category_name}</span>
-                      {s.phone && <><br /><a href={`tel:${s.phone}`} className="text-blue-600">{s.phone}</a></>}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+              <MarkerClusterGroup
+                chunkedLoading
+                maxClusterRadius={40}
+                showCoverageOnHover={false}
+              >
+                {services.map((s) => s.latitude && s.longitude && (
+                  <Marker 
+                    key={s.id} 
+                    position={[parseFloat(s.latitude), parseFloat(s.longitude)]}
+                    icon={getMarkerIcon(s.category_id)}
+                    eventHandlers={{
+                      mouseover: (e) => { const el = e.target.getElement(); if (el) el.classList.add('hovered-marker'); },
+                      mouseout: (e) => { const el = e.target.getElement(); if (el) el.classList.remove('hovered-marker'); }
+                    }}
+                    ref={(ref) => {
+                      if (ref) markerRefs.current[s.id] = ref;
+                    }}
+                  >
+                    <Popup className="enhanced-popup">
+                      <div style={{ minWidth: 180, fontFamily: 'DM Sans, sans-serif' }}>
+                        <strong style={{ fontSize: 14, display: 'block', marginBottom: 4 }}>{s.name}</strong>
+                        <span style={{ display: 'inline-block', fontSize: 10, padding: '2px 8px', borderRadius: 12, background: (CATEGORY_COLORS[s.category_id] || '#6B7280') + '18', color: CATEGORY_COLORS[s.category_id] || '#6B7280', fontWeight: 600, marginBottom: 6 }}>{s.category_name}</span>
+                        <p style={{ fontSize: 11, color: '#6B7280', margin: '4px 0' }}>{s.address}</p>
+                        {s.distance_km != null && <p style={{ fontSize: 11, color: '#F97316', fontWeight: 500, margin: '2px 0' }}>📍 {parseFloat(s.distance_km).toFixed(1)} km away</p>}
+                        {s.phone && <p style={{ fontSize: 11, margin: '2px 0' }}><a href={`tel:${s.phone}`} style={{ color: '#10B981', fontWeight: 500 }}>📞 {s.phone}</a></p>}
+                        {s.operating_hours && <p style={{ fontSize: 10, color: '#6B7280', margin: '2px 0' }}>🕐 {s.operating_hours}</p>}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MarkerClusterGroup>
             </MapContainer>
           </div>
         </div>

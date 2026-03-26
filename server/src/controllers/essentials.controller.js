@@ -53,3 +53,37 @@ export const reportService = asyncHandler(async (req, res) => {
 
   res.json({ success: true, message: 'Report submitted. Thank you!' });
 });
+
+/**
+ * GET /api/essentials/geocode
+ * Proxy to Nominatim Reverse Geocoding API to bypass CORS
+ * Query params: lat, lng
+ */
+export const reverseGeocode = asyncHandler(async (req, res) => {
+  const { lat, lng } = req.query;
+
+  if (!lat || !lng) {
+    throw new AppError('Latitude and longitude are required', 400);
+  }
+
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Accept-Language': 'en',
+        'User-Agent': 'MoveMateV1/1.0 (Contact: support@movemate.local)' // Required by Nominatim Policy
+      }
+    });
+
+    if (!response.ok) {
+        throw new AppError(`Nominatim API error: ${response.statusText}`, response.status);
+    }
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Nominatim Proxy Error:', err);
+    throw new AppError('Failed to geocode address', 500);
+  }
+});

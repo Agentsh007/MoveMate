@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Calendar, Heart, User, Settings, Loader2,
-  MapPin, ChevronRight, Clock, Building2
+  MapPin, ChevronRight, Clock, Building2, Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
@@ -46,7 +46,7 @@ export default function UserDashboard() {
           setBookings(data.bookings || []);
         } else if (activeTab === 'saved') {
           const { data } = await savedAPI.list();
-          setSaved(data.saved || []);
+          setSaved(data.listings || []);
         }
       } catch (err) {
         console.error('Dashboard fetch error:', err);
@@ -75,7 +75,7 @@ export default function UserDashboard() {
   const removeSaved = async (propertyId) => {
     try {
       await savedAPI.unsave(propertyId);
-      setSaved(prev => prev.filter(s => s.property_id !== propertyId));
+      setSaved(prev => prev.filter(s => s.id !== propertyId));
       toast.success('Removed from saved');
     } catch (err) {
       toast.error('Failed to remove');
@@ -151,6 +151,11 @@ export default function UserDashboard() {
                         <span className="flex items-center gap-1"><Clock size={13} /> {formatDate(b.check_in)}{b.check_out ? ` — ${formatDate(b.check_out)}` : ''}</span>
                         <span className="font-semibold text-primary">{formatPrice(b.total_price)}</span>
                       </div>
+                      <div className="mt-4">
+                        <Link to={`/bookings/${b.id}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-hover transition-colors">
+                          <Eye size={16} /> View Booking Details
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 )) : (
@@ -168,25 +173,25 @@ export default function UserDashboard() {
             {activeTab === 'saved' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {saved.length > 0 ? saved.map((s) => (
-                  <div key={s.property_id} className="card">
+                  <div key={s.id} className="card">
                     <div className="relative aspect-[4/3]">
                       <img
-                        src={s.property_image || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400'}
-                        alt={s.property_title}
+                        src={s.primary_image || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400'}
+                        alt={s.title}
                         className="w-full h-full object-cover"
                       />
                       <button
-                        onClick={() => removeSaved(s.property_id)}
+                        onClick={() => removeSaved(s.id)}
                         className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-sm hover:bg-red-50 group"
                       >
                         <Heart size={16} className="text-red-500 fill-red-500 group-hover:scale-110 transition-transform" />
                       </button>
                     </div>
                     <div className="p-4">
-                      <Link to={`/listings/${s.property_id}`} className="font-heading font-semibold text-sm hover:text-primary">
-                        {s.property_title}
+                      <Link to={`/listings/${s.id}`} className="font-heading font-semibold text-sm hover:text-primary">
+                        {s.title}
                       </Link>
-                      <p className="text-xs text-muted mt-1">{s.property_city}</p>
+                      <p className="text-xs text-muted mt-1">{s.city}</p>
                       <p className="text-sm font-bold text-primary mt-2">{formatPrice(s.base_price, s.price_unit)}</p>
                     </div>
                   </div>

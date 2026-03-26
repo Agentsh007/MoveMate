@@ -10,7 +10,6 @@ import { z } from 'zod';
 import { Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../api/auth.api';
-import useAuthStore from '../../store/authStore';
 
 // Zod schema — validates form data before submission
 const loginSchema = z.object({
@@ -23,7 +22,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { setAuth } = useAuthStore();
 
   // React Hook Form — connects to Zod for validation
   const {
@@ -38,7 +36,6 @@ export default function Login() {
     setLoading(true);
     try {
       const { data } = await authAPI.login(formData);
-      setAuth(data.user, data.accessToken, data.refreshToken);
       toast.success(`Welcome back, ${data.user.name}!`);
 
       // Redirect to where user was trying to go, or home

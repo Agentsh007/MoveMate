@@ -25,7 +25,12 @@ const __dirname = path.dirname(__filename);
 const { Pool } = pg;
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  host: 'aws-1-ap-northeast-1.pooler.supabase.com',
+  port: 5432,
+  database: 'postgres',
+  user: 'postgres.mitwtomranufdkxmzkfg',
+  password: 'DaY4al7Asusbj6EL',
+  ssl: { rejectUnauthorized: false },
 });
 
 async function runMigrations() {

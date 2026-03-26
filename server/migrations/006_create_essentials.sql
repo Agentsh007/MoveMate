@@ -19,7 +19,7 @@
 CREATE EXTENSION IF NOT EXISTS cube;
 CREATE EXTENSION IF NOT EXISTS earthdistance;
 
-CREATE TABLE essential_categories (
+CREATE TABLE IF NOT EXISTS essential_categories (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name          VARCHAR(100) NOT NULL,
   icon          VARCHAR(100),
@@ -27,7 +27,7 @@ CREATE TABLE essential_categories (
   display_order INT DEFAULT 0
 );
 
-CREATE TABLE essential_services (
+CREATE TABLE IF NOT EXISTS essential_services (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id UUID NOT NULL REFERENCES essential_categories(id),
   name        VARCHAR(255) NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE essential_services (
 
 -- Spatial GiST index for fast radius queries
 -- This allows earth_box() to use the index instead of full table scan
-CREATE INDEX idx_essential_location
+CREATE INDEX IF NOT EXISTS idx_essential_location
   ON essential_services USING gist (
     ll_to_earth(latitude, longitude)
   );

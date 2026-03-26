@@ -1,20 +1,27 @@
 // =============================================
-// ProtectedRoute & OwnerRoute — Auth Gate Wrappers
+// ProtectedRoute & OwnerRoute — Supabase Auth Gate
 // =============================================
-// These components wrap routes that require authentication.
-// If user is not logged in → redirect to /login
-// If user is not an owner → redirect to /dashboard
+// Checks both Supabase session AND app user data.
+// Shows loading spinner while auth state initializes.
 // =============================================
 
 import { Navigate, useLocation } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
 export const ProtectedRoute = ({ children }) => {
-  const { user } = useAuthStore();
+  const { user, session, loading } = useAuthStore();
   const location = useLocation();
 
-  // Not logged in → redirect to login, save intended destination
-  if (!user) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!session || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -22,9 +29,17 @@ export const ProtectedRoute = ({ children }) => {
 };
 
 export const OwnerRoute = ({ children }) => {
-  const { user } = useAuthStore();
+  const { user, session, loading } = useAuthStore();
 
-  if (!user) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!session || !user) {
     return <Navigate to="/login" replace />;
   }
 

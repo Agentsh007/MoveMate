@@ -9,7 +9,9 @@ import {
   DoorOpen, BedDouble, ArrowRight, CheckCircle2,
   Map, AlertTriangle, Loader2
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { propertyAPI } from '../api/property.api';
+import useAuthStore from '../store/authStore';
 import PropertyCard from '../components/property/PropertyCard';
 
 const PROPERTY_TYPES = [
@@ -29,10 +31,19 @@ const HOW_IT_WORKS = [
 ];
 
 export default function Home() {
+  const { user } = useAuthStore();
   const [featured, setFeatured] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchCity, setSearchCity] = useState('');
   const navigate = useNavigate();
+
+  const handleListPropertyClick = (e) => {
+    if (user && user.role !== 'owner' && user.role !== 'admin') {
+      e.preventDefault();
+      toast.error('You need an Owner account to list properties.');
+      navigate('/dashboard');
+    }
+  };
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -219,7 +230,8 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              to="/register"
+              to={user ? (user.role === 'owner' || user.role === 'admin' ? '/owner/listings/new' : '/dashboard') : '/register'}
+              onClick={handleListPropertyClick}
               className="bg-white text-accent font-semibold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition-all shadow-lg active:scale-[0.98]"
             >
               List Your Property

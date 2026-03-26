@@ -10,24 +10,33 @@
 import { useState, useEffect } from 'react';
 import {
   Phone, MapPin, AlertTriangle, Shield, Flame, Ambulance,
-  Zap, Baby, Loader2, RefreshCw, WifiOff, Search
+  Zap, Baby, Loader2, RefreshCw, WifiOff, Search, Info
 } from 'lucide-react';
 import { emergencyAPI } from '../api/location.api';
 import { DHAKA_CENTER } from '../utils/constants';
+import { EmergencyCardSkeleton } from '../components/shared/LoadingSkeleton';
+
+const NATIONWIDE_NUMBERS = [
+  { name: 'National Emergency Service (Police, Fire, Ambulance)', phone: '999', icon: AlertTriangle, color: 'from-red-600 to-red-800' },
+  { name: 'Women & Child Abuse Helpline', phone: '109', icon: Baby, color: 'from-pink-500 to-pink-700' },
+  { name: 'Disaster Management', phone: '1090', icon: Flame, color: 'from-orange-500 to-orange-700' },
+  { name: 'Govt. Info & Services', phone: '333', icon: Phone, color: 'from-blue-500 to-blue-700' },
+];
 
 const CATEGORY_ICONS = {
-  Police: Shield, Fire: Flame, Ambulance: Ambulance,
+  Police: Shield, 'Fire Service': Flame, Ambulance: Ambulance,
   'Gas Leak': Zap, "Women's Helpline": Phone, "Child Helpline": Baby,
-  Default: AlertTriangle,
+  'Flood / Disaster': AlertTriangle, Default: AlertTriangle,
 };
 
 const CATEGORY_COLORS = {
   Police: 'from-blue-500 to-blue-700',
-  Fire: 'from-red-500 to-red-700',
+  'Fire Service': 'from-red-500 to-red-700',
   Ambulance: 'from-green-500 to-green-700',
   'Gas Leak': 'from-amber-500 to-amber-700',
   "Women's Helpline": 'from-pink-500 to-pink-700',
   "Child Helpline": 'from-purple-500 to-purple-700',
+  'Flood / Disaster': 'from-cyan-500 to-cyan-700',
   Default: 'from-gray-500 to-gray-700',
 };
 
@@ -64,7 +73,7 @@ export default function Emergency() {
       let lat = DHAKA_CENTER.lat, lng = DHAKA_CENTER.lng;
       try {
         const pos = await new Promise((resolve, reject) =>
-          navigator.geolocation?.getCurrentPosition(resolve, reject, { timeout: 5000 })
+          navigator.geolocation?.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 })
         );
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
@@ -179,10 +188,37 @@ export default function Emergency() {
           </div>
         </div>
 
+        {/* Nationwide Banner */}
+        {!searchQuery && !selectedCategory && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+               <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                 <AlertTriangle size={16} className="text-red-600" />
+               </div>
+               <h2 className="font-heading font-bold text-gray-900">National Emergency Lines</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {NATIONWIDE_NUMBERS.map((n, idx) => (
+                <a key={idx} href={`tel:${n.phone}`} className={`relative overflow-hidden rounded-xl p-4 text-white hover:scale-[1.02] transition-transform shadow-sm group bg-gradient-to-br ${n.color}`}>
+                  <div className="absolute right-0 bottom-0 opacity-10 translate-x-4 translate-y-4 group-hover:-translate-x-1 group-hover:-translate-y-1 transition-transform duration-500">
+                    <n.icon size={80} />
+                  </div>
+                  <n.icon size={20} className="mb-2 text-white/90" />
+                  <p className="text-xs font-medium text-white/80 mb-0.5">{n.name}</p>
+                  <p className="text-2xl font-bold font-heading">{n.phone}</p>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Contact Cards */}
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 size={32} className="animate-spin text-red-500" />
+          <div className="space-y-4">
+             <div className="h-6 bg-gray-200 rounded w-40 mb-3 animate-pulse" />
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => <EmergencyCardSkeleton key={i} />)}
+             </div>
           </div>
         ) : Object.keys(grouped).length > 0 ? (
           <div className="space-y-8">
@@ -204,7 +240,7 @@ export default function Emergency() {
                       <a
                         key={contact.id}
                         href={`tel:${contact.phone}`}
-                        className="bg-white rounded-xl border border-border p-4 hover:shadow-elevated hover:border-red-200 transition-all group active:scale-[0.98]"
+                        className="bg-white rounded-xl border border-border p-4 hover:shadow-elevated hover:border-red-200 transition-all group animate-fade-in active:scale-[0.98]"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -243,15 +279,6 @@ export default function Emergency() {
           </div>
         )}
 
-        {/* Emergency Banner */}
-        <div className="mt-8 bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-          <p className="text-red-700 font-heading font-bold text-lg">🚨 In case of extreme emergency</p>
-          <a href="tel:999" className="inline-flex items-center gap-2 bg-red-600 text-white px-8 py-3 rounded-xl mt-3 font-bold text-lg hover:bg-red-700 transition-colors active:scale-[0.98]">
-            <Phone size={20} />
-            Call 999
-          </a>
-          <p className="text-xs text-red-500 mt-2">National Emergency Number — Free from any phone</p>
-        </div>
       </div>
     </div>
   );

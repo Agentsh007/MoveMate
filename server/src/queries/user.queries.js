@@ -1,18 +1,21 @@
 // =============================================
-// User SQL Queries
+// User SQL Queries — Supabase Auth Compatible
 // =============================================
-// All raw SQL for user-related operations.
-// Keeping queries in a separate file makes them:
-// - Easy to find and modify
-// - Testable independently
-// - Clear about what the database is doing
+// auth_id links our users table to Supabase's auth.users
+// password_hash is no longer stored (managed by Supabase Auth)
 // =============================================
 
 export const userQueries = {
-  // Find user by email (for login)
+  // Find user by email
   findByEmail: `
-    SELECT id, name, email, phone, password_hash, role, is_verified, created_at
+    SELECT id, name, email, phone, role, is_verified, auth_id, created_at
     FROM users WHERE email = $1
+  `,
+
+  // Find user by Supabase auth ID
+  findByAuthId: `
+    SELECT id, name, email, phone, role, is_verified, created_at
+    FROM users WHERE auth_id = $1
   `,
 
   // Find user by ID
@@ -21,9 +24,9 @@ export const userQueries = {
     FROM users WHERE id = $1
   `,
 
-  // Create a new user
+  // Create a new user (no password_hash — Supabase handles auth)
   create: `
-    INSERT INTO users (name, email, phone, password_hash, role)
+    INSERT INTO users (name, email, phone, role, auth_id)
     VALUES ($1, $2, $3, $4, $5)
     RETURNING id, name, email, phone, role, is_verified, created_at
   `,

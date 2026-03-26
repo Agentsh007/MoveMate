@@ -1,30 +1,28 @@
 // =============================================
-// Auth Middleware — JWT Token Verification
+// Auth Middleware — Supabase Token Verification
 // =============================================
-// HOW JWT AUTH WORKS:
-// 1. User logs in → server creates a JWT token containing { id, role }
-// 2. Client stores the token and sends it with every request as:
+// HOW SUPABASE AUTH WORKS:
+// 1. User logs in via Supabase Auth → receives a JWT access token
+// 2. Client sends token with every request as:
 //    Authorization: Bearer <token>
-// 3. This middleware extracts the token, verifies it with the secret,
-//    and looks up the user in the database
-// 4. If valid, req.user is populated and the request continues
-// 5. If invalid/expired, return 401 Unauthorized
+// 3. This middleware sends token to Supabase to verify it
+// 4. Supabase returns the auth user → we look up our local user
+// 5. req.user is populated with our DB user data
 //
 // Two levels of protection:
 // - protect: any authenticated user
 // - ownerOnly: only users with role 'owner' or 'admin'
+// - optionalAuth: populates req.user if token present, null otherwise
 // =============================================
 
-import jwt from 'jsonwebtoken';
+import { supabaseAdmin } from '../config/supabase.js';
 import { query } from '../config/db.js';
 
 /**
- * Verify JWT token and attach user to request
- * Use this on any route that requires login
+ * Verify Supabase auth token and attach user to request
  */
 export const protect = async (req, res, next) => {
   try {
-    // Extract token from "Bearer <token>" header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ message: 'Not authenticated — no token provided' });
@@ -32,27 +30,27 @@ export const protect = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verify token signature and expiry
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify token with Supabase Auth
+    const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
 
-    // Look up user in DB (ensures user still exists and gets latest role)
+    if (error || !authUser) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+
+    // Look up our local user by Supabase auth_id
     const { rows } = await query(
-      'SELECT id, name, email, role, is_verified FROM users WHERE id = $1',
-      [decoded.id]
+      'SELECT id, name, email, role, is_verified FROM users WHERE auth_id = $1',
+      [authUser.id]
     );
 
     if (!rows[0]) {
-      return res.status(401).json({ message: 'User no longer exists' });
+      return res.status(401).json({ message: 'User not found in database' });
     }
 
-    // Attach user object to request — accessible in controllers
     req.user = rows[0];
     next();
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token expired — please refresh' });
-    }
-    return res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ message: 'Authentication failed' });
   }
 };
 
@@ -69,8 +67,6 @@ export const ownerOnly = (req, res, next) => {
 
 /**
  * Optional auth — doesn't fail if no token, but populates req.user if present
- * Useful for routes that show different data to logged-in vs guest users
- * (e.g., property detail shows owner contact only to logged-in users)
  */
 export const optionalAuth = async (req, res, next) => {
   try {
@@ -81,10 +77,16 @@ export const optionalAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !authUser) {
+      req.user = null;
+      return next();
+    }
+
     const { rows } = await query(
-      'SELECT id, name, email, role, is_verified FROM users WHERE id = $1',
-      [decoded.id]
+      'SELECT id, name, email, role, is_verified FROM users WHERE auth_id = $1',
+      [authUser.id]
     );
 
     req.user = rows[0] || null;

@@ -103,6 +103,16 @@ export const locationQueries = {
     ORDER BY cat.priority_level ASC
   `,
 
+  // Get ALL emergency contacts nationwide (ultimate fallback)
+  getAllEmergencyContacts: `
+    SELECT ec.*, cat.name AS category_name, cat.icon AS category_icon,
+      cat.color AS category_color, cat.priority_level
+    FROM emergency_contacts ec
+    JOIN emergency_categories cat ON ec.category_id = cat.id
+    WHERE ec.is_active = true
+    ORDER BY cat.priority_level ASC
+  `,
+
   // === NOTIFICATIONS ===
 
   getUserNotifications: `

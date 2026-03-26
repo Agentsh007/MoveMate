@@ -1,7 +1,17 @@
 import { Link } from 'react-router-dom';
 import { Building2, MapPin, AlertTriangle, Mail, Phone, Github } from 'lucide-react';
+import useAuthStore from '../../store/authStore';
+import toast from 'react-hot-toast';
 
 export default function Footer() {
+  const { user } = useAuthStore();
+
+  const handleListPropertyClick = (e) => {
+    if (user && user.role !== 'owner' && user.role !== 'admin') {
+      toast.error('You need an Owner account to list properties.');
+    }
+  };
+
   return (
     <footer className="bg-primary text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,12 +64,19 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link to="/register" className="text-sm text-white/60 hover:text-accent transition-colors">
+                <Link 
+                  to={user ? (user.role === 'owner' || user.role === 'admin' ? '/owner/listings/new' : '/dashboard') : '/register'}
+                  onClick={handleListPropertyClick}
+                  className="text-sm text-white/60 hover:text-accent transition-colors"
+                >
                   List Your Property
                 </Link>
               </li>
               <li>
-                <Link to="/owner" className="text-sm text-white/60 hover:text-accent transition-colors">
+                <Link 
+                  to={user ? (user.role === 'owner' || user.role === 'admin' ? '/owner' : '/dashboard') : '/login'}
+                  className="text-sm text-white/60 hover:text-accent transition-colors"
+                >
                   Owner Dashboard
                 </Link>
               </li>

@@ -44,7 +44,7 @@ app.use(helmet());
 // CORS: Allow requests from our React frontend
 // credentials: true = allow cookies/auth headers from frontend
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'].filter(Boolean),
   credentials: true,
 }));
 
@@ -62,10 +62,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ---- Rate Limiting ----
-// Prevent abuse: max 100 requests per 15 minutes per IP
+// Prevent abuse: max 1000 requests per 15 minutes per IP (increased for dev/SPA routing)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 1000,
   message: { message: 'Too many requests, please try again later' },
 });
 app.use('/api', limiter);

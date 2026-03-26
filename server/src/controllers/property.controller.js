@@ -11,7 +11,7 @@
 import { query, getClient } from '../config/db.js';
 import { propertyQueries } from '../queries/property.queries.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import cloudinary from '../config/cloudinary.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 /**
  * GET /api/properties
@@ -298,7 +298,7 @@ export const deleteProperty = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/properties/:id/images
- * Upload property images to Cloudinary
+ * Upload property images to Supabase Storage
  */
 export const uploadImages = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -311,31 +311,33 @@ export const uploadImages = asyncHandler(async (req, res) => {
 
   for (let i = 0; i < req.files.length; i++) {
     const file = req.files[i];
+    const ext = file.originalname.split('.').pop();
+    const fileName = `${id}/${Date.now()}_${i}.${ext}`;
 
-    // Upload to Cloudinary from memory buffer
-    const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'movemate/properties',
-          resource_type: 'image',
-          transformation: [
-            { width: 1200, height: 800, crop: 'limit' },
-            { quality: 'auto' },
-            { fetch_format: 'auto' },
-          ],
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      stream.end(file.buffer);
-    });
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from('property-images')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      continue;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin.storage
+      .from('property-images')
+      .getPublicUrl(fileName);
+
+    const publicUrl = urlData.publicUrl;
 
     // Save to DB
     const isPrimary = i === 0 && uploadedImages.length === 0;
     const { rows } = await query(propertyQueries.addImage, [
-      id, result.secure_url, isPrimary, i
+      id, publicUrl, isPrimary, i
     ]);
 
     uploadedImages.push(rows[0]);
@@ -346,15 +348,29 @@ export const uploadImages = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/properties/:id/images/:imageId
- * Remove a property image
+ * Remove a property image from DB and Supabase Storage
  */
 export const deleteImage = asyncHandler(async (req, res) => {
   const { id, imageId } = req.params;
+
+  // Get the image URL before deleting
+  const { rows: imageRows } = await query(
+    'SELECT url FROM property_images WHERE id = $1 AND property_id = $2',
+    [imageId, id]
+  );
 
   const { rows } = await query(propertyQueries.deleteImage, [imageId, id]);
 
   if (!rows[0]) {
     throw new AppError('Image not found', 404);
+  }
+
+  // Try to delete from Supabase Storage (best-effort)
+  if (imageRows[0]?.url?.includes('supabase')) {
+    const path = imageRows[0].url.split('/property-images/')[1];
+    if (path) {
+      await supabaseAdmin.storage.from('property-images').remove([path]).catch(() => {});
+    }
   }
 
   res.json({ success: true, message: 'Image deleted' });

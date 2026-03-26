@@ -8,7 +8,7 @@
 -- Same spatial indexing as essentials for "nearest police station" queries.
 -- =============================================
 
-CREATE TABLE emergency_categories (
+CREATE TABLE IF NOT EXISTS emergency_categories (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name           VARCHAR(100) NOT NULL,
   icon           VARCHAR(100),
@@ -16,7 +16,7 @@ CREATE TABLE emergency_categories (
   priority_level SMALLINT DEFAULT 5
 );
 
-CREATE TABLE emergency_contacts (
+CREATE TABLE IF NOT EXISTS emergency_contacts (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id         UUID NOT NULL REFERENCES emergency_categories(id),
   name                VARCHAR(255) NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE emergency_contacts (
 );
 
 -- Spatial index for fast location-based queries
-CREATE INDEX idx_emergency_location
+CREATE INDEX IF NOT EXISTS idx_emergency_location
   ON emergency_contacts USING gist (
     ll_to_earth(latitude, longitude)
   );

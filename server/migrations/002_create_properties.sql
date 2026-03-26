@@ -9,22 +9,27 @@
 -- We store lat/lng directly for spatial queries later.
 -- =============================================
 
--- What kind of property it is
-CREATE TYPE property_type AS ENUM ('hotel', 'flat', 'apartment', 'sublet', 'tolet', 'room');
+DO $$ BEGIN
+  CREATE TYPE property_type AS ENUM ('hotel', 'flat', 'apartment', 'sublet', 'tolet', 'room');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
--- How the property is booked — this determines the entire booking flow
--- hotel_style = date-based, pay now or at property
--- short_term = instant book or request-based
--- long_term = inquiry → visit → agreement
-CREATE TYPE booking_model AS ENUM ('hotel_style', 'short_term', 'long_term');
+DO $$ BEGIN
+  CREATE TYPE booking_model AS ENUM ('hotel_style', 'short_term', 'long_term');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
--- How the price is calculated
-CREATE TYPE price_unit AS ENUM ('per_night', 'per_month');
+DO $$ BEGIN
+  CREATE TYPE price_unit AS ENUM ('per_night', 'per_month');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
--- Property lifecycle status
-CREATE TYPE property_status AS ENUM ('active', 'inactive', 'pending_review');
+DO $$ BEGIN
+  CREATE TYPE property_status AS ENUM ('active', 'inactive', 'pending_review');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE properties (
+CREATE TABLE IF NOT EXISTS properties (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title          VARCHAR(255) NOT NULL,
@@ -47,7 +52,7 @@ CREATE TABLE properties (
 );
 
 -- Multiple images per property — display_order controls carousel order
-CREATE TABLE property_images (
+CREATE TABLE IF NOT EXISTS property_images (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id   UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   url           TEXT NOT NULL,
@@ -56,14 +61,14 @@ CREATE TABLE property_images (
 );
 
 -- Amenities as individual rows (flexible, queryable)
-CREATE TABLE property_amenities (
+CREATE TABLE IF NOT EXISTS property_amenities (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   name        VARCHAR(100) NOT NULL
 );
 
 -- Owner-defined rules for tenants
-CREATE TABLE property_rules (
+CREATE TABLE IF NOT EXISTS property_rules (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   rule_text   TEXT NOT NULL

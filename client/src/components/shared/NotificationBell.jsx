@@ -4,9 +4,12 @@ import { notificationAPI } from '../../api/location.api';
 import useNotificationStore from '../../store/notificationStore';
 import { timeAgo } from '../../utils/formatDate';
 
+import { useNavigate } from 'react-router-dom';
+
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
   const { notifications, unreadCount, setNotifications, markRead, markAllRead } = useNotificationStore();
 
   // Fetch notifications on mount
@@ -54,6 +57,22 @@ export default function NotificationBell() {
     }
   };
 
+  const handleNotificationClick = async (n) => {
+    if (!n.is_read) {
+      await handleMarkRead(n.id);
+    }
+    
+    try {
+      const payload = typeof n.payload === 'string' ? JSON.parse(n.payload) : n.payload;
+      if (payload && payload.booking_id) {
+        setIsOpen(false);
+        navigate(`/bookings/${payload.booking_id}`);
+      }
+    } catch (e) {
+      console.warn('Failed to parse notification payload', e);
+    }
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
@@ -96,7 +115,7 @@ export default function NotificationBell() {
                   className={`px-4 py-3 border-b border-border/50 hover:bg-gray-50 cursor-pointer transition-colors ${
                     !n.is_read ? 'bg-blue-50/50' : ''
                   }`}
-                  onClick={() => !n.is_read && handleMarkRead(n.id)}
+                  onClick={() => handleNotificationClick(n)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">

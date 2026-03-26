@@ -212,7 +212,7 @@ export default function OwnerDashboard() {
                       <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3 mb-3 italic">"{b.message}"</p>
                     )}
                     {b.status === 'pending' && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 mb-3">
                         <button
                           onClick={() => handleBookingAction(b.id, 'confirmed')}
                           className="flex-1 bg-green-50 text-green-700 font-medium py-2 rounded-lg text-sm hover:bg-green-100 transition-colors"
@@ -220,13 +220,18 @@ export default function OwnerDashboard() {
                           ✓ Accept
                         </button>
                         <button
-                          onClick={() => handleBookingAction(b.id, 'rejected')}
+                          onClick={() => handleBookingAction(b.id, 'cancelled')}
                           className="flex-1 bg-red-50 text-red-700 font-medium py-2 rounded-lg text-sm hover:bg-red-100 transition-colors"
                         >
                           ✕ Reject
                         </button>
                       </div>
                     )}
+                    <div className="pt-2 border-t border-gray-100">
+                      <Link to={`/bookings/${b.id}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-hover transition-colors">
+                        <Eye size={16} /> View Full Booking Details
+                      </Link>
+                    </div>
                   </div>
                 )) : (
                   <div className="text-center py-16 bg-white rounded-xl border border-border">

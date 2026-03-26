@@ -7,7 +7,7 @@
 // and saves files temporarily to disk or memory.
 //
 // We use memoryStorage (files stay in RAM as Buffer) because:
-// - We're uploading immediately to Cloudinary
+// - We're uploading immediately to Supabase Storage
 // - We don't need to persist files locally
 // - Simpler cleanup (no temp files on disk)
 //

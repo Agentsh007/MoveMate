@@ -11,26 +11,32 @@
 -- The status ENUM tracks the full lifecycle from draft → completed.
 -- =============================================
 
-CREATE TYPE booking_type AS ENUM (
-  'hotel_pay_now',           -- Hotel: user pays immediately
-  'hotel_pay_at_property',   -- Hotel: user pays at check-in
-  'long_term_inquiry',       -- Long-term: inquiry → visit → agreement
-  'short_term_instant',      -- Short-term: instant book
-  'short_term_request'       -- Short-term: request → owner approval
-);
+DO $$ BEGIN
+  CREATE TYPE booking_type AS ENUM (
+    'hotel_pay_now',
+    'hotel_pay_at_property',
+    'long_term_inquiry',
+    'short_term_instant',
+    'short_term_request'
+  );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE booking_status AS ENUM (
-  'draft',        -- User started but didn't submit
-  'pending',      -- Awaiting owner response
-  'confirmed',    -- Owner accepted or instant-booked
-  'rejected',     -- Owner declined
-  'visited',      -- Long-term: visit completed
-  'contracted',   -- Long-term: agreement signed
-  'cancelled',    -- User or owner cancelled
-  'completed'     -- Stay finished
-);
+DO $$ BEGIN
+  CREATE TYPE booking_status AS ENUM (
+    'draft',
+    'pending',
+    'confirmed',
+    'rejected',
+    'visited',
+    'contracted',
+    'cancelled',
+    'completed'
+  );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE bookings (
+CREATE TABLE IF NOT EXISTS bookings (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id  UUID NOT NULL REFERENCES properties(id),
   user_id      UUID NOT NULL REFERENCES users(id),
@@ -45,7 +51,7 @@ CREATE TABLE bookings (
 );
 
 -- For short-term request bookings: tracks owner response
-CREATE TABLE booking_requests (
+CREATE TABLE IF NOT EXISTS booking_requests (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id     UUID UNIQUE NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   user_message   TEXT,
@@ -55,7 +61,7 @@ CREATE TABLE booking_requests (
 );
 
 -- For long-term: scheduled property visits
-CREATE TABLE rental_visits (
+CREATE TABLE IF NOT EXISTS rental_visits (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id   UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   scheduled_at TIMESTAMP,
@@ -64,7 +70,7 @@ CREATE TABLE rental_visits (
 );
 
 -- For long-term: formal rental agreement after visit
-CREATE TABLE rental_agreements (
+CREATE TABLE IF NOT EXISTS rental_agreements (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id      UUID UNIQUE NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   deposit_amount  NUMERIC(10, 2),

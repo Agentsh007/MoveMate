@@ -22,11 +22,16 @@ export const getEmergencyContacts = asyncHandler(async (req, res) => {
     result = await query(locationQueries.getEmergencyContacts, [
       parseFloat(lat), parseFloat(lng)
     ]);
+    
+    // If the spatial query finds 0 nearby contacts, fallback to nationwide
+    if (result.rows.length === 0) {
+      result = await query(locationQueries.getAllEmergencyContacts);
+    }
   } else if (city) {
     result = await query(locationQueries.getEmergencyByCity, [city]);
   } else {
-    // Default: return all active contacts for Dhaka
-    result = await query(locationQueries.getEmergencyByCity, ['Dhaka']);
+    // Default: return all active contacts nationwide
+    result = await query(locationQueries.getAllEmergencyContacts);
   }
 
   res.json({ success: true, contacts: result.rows });

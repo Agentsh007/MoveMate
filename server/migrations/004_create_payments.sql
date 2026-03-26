@@ -10,11 +10,22 @@
 -- The status tracks whether it's pending, completed, failed, or refunded.
 -- =============================================
 
-CREATE TYPE payment_method AS ENUM ('bkash', 'nagad', 'rocket', 'card', 'cash');
-CREATE TYPE payment_timing AS ENUM ('pay_now', 'pay_at_property', 'pay_after_agreement');
-CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+DO $$ BEGIN
+  CREATE TYPE payment_method AS ENUM ('credit_card', 'bkash', 'nagad', 'bank_transfer', 'cash');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE payments (
+DO $$ BEGIN
+  CREATE TYPE payment_timing AS ENUM ('pay_now', 'pay_at_property', 'pay_after_agreement');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS payments (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id     UUID NOT NULL REFERENCES bookings(id),
   payer_id       UUID NOT NULL REFERENCES users(id),
