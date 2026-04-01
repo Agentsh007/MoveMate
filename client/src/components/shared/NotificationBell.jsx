@@ -61,7 +61,7 @@ export default function NotificationBell() {
     if (!n.is_read) {
       await handleMarkRead(n.id);
     }
-    
+
     try {
       const payload = typeof n.payload === 'string' ? JSON.parse(n.payload) : n.payload;
       if (payload && payload.booking_id) {
@@ -89,8 +89,17 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-modal border border-border z-50 animate-fade-in overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-border">
+        // <div className="absolute -translate-x-1/2 left-1/2  mt-2  max-w-[calc(90vw-4rem)]   bg-white rounded-xl shadow-modal border border-border z-50 animate-fade-in overflow-hidden">
+        <div className="
+    fixed sm:absolute
+    left-1/2 sm:left-auto sm:right-0
+    -translate-x-1/2 sm:translate-x-0
+    top-16 sm:top-auto sm:mt-2
+    w-[calc(100vw-2rem)] sm:w-80 md:w-96
+    max-h-[70vh] sm:max-h-none
+    bg-white rounded-xl shadow-modal border border-border z-50 animate-fade-in overflow-hidden
+  ">
+          <div className="flex items-center justify-between p-3 border-b border-border">
             <h3 className="font-heading font-semibold text-sm">Notifications</h3>
             {unreadCount > 0 && (
               <button
@@ -105,16 +114,15 @@ export default function NotificationBell() {
 
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-muted text-sm">
+              <div className="p-4 text-center text-muted text-sm">
                 No notifications yet
               </div>
             ) : (
               notifications.slice(0, 10).map((n) => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 border-b border-border/50 hover:bg-gray-50 cursor-pointer transition-colors ${
-                    !n.is_read ? 'bg-blue-50/50' : ''
-                  }`}
+                  className={`px-4 py-3 border-b border-border/50 hover:bg-gray-50 cursor-pointer transition-colors ${!n.is_read ? 'bg-blue-50/50' : ''
+                    }`}
                   onClick={() => handleNotificationClick(n)}
                 >
                   <div className="flex items-start justify-between gap-2">

@@ -52,25 +52,25 @@ const getMarkerIcon = (categoryId) => {
 
 function MapController({ selectedService, markerRefs, userLocation }) {
   const map = useMap();
-  
+
   useEffect(() => {
     if (selectedService && markerRefs.current[selectedService.id]) {
       const marker = markerRefs.current[selectedService.id];
       // Fly to zoom level 18 for max clarity
       map.flyTo([selectedService.latitude, selectedService.longitude], 18, { animate: true, duration: 1.2 });
-      
+
       const timeout = setTimeout(() => {
         if (markerRefs.current[selectedService.id]) {
           markerRefs.current[selectedService.id].openPopup();
         }
       }, 1250); // slight delay to allow flyTo to finish settling
-      
+
       return () => clearTimeout(timeout);
     } else if (!selectedService && userLocation) {
       map.flyTo([userLocation.lat, userLocation.lng], 13, { animate: true });
     }
   }, [selectedService, map, markerRefs, userLocation]);
-  
+
   return null;
 }
 
@@ -93,7 +93,7 @@ function LocateMeControl({ setUserLocation }) {
                 setUserLocation(loc);
                 map.flyTo([loc.lat, loc.lng], 14, { animate: true, duration: 1 });
               },
-              () => {},
+              () => { },
               { maximumAge: 0, timeout: 10000, enableHighAccuracy: true }
             );
           }}
@@ -127,7 +127,7 @@ function AddressDisplay({ address, lat, lng }) {
 
   return (
     <p className="text-xs text-muted mt-0.5 flex items-start gap-1">
-      <MapPin size={11} className="mt-0.5 shrink-0" /> 
+      <MapPin size={11} className="mt-0.5 shrink-0" />
       {loading ? <span className="animate-pulse">Loading exact address...</span> : <span className="line-clamp-2 leading-relaxed">{displayAddress}</span>}
     </p>
   );
@@ -169,7 +169,7 @@ export default function Essentials() {
       }
 
       const elements = await fetchOverpassData(userLocation.lat, userLocation.lng, searchRadius, queryBody);
-      
+
       const parsedServices = elements
         .filter(el => el.type === 'node' && el.tags)
         .map(el => {
@@ -177,14 +177,14 @@ export default function Essentials() {
           let catName = 'Service';
           let catId = 'default';
           let Icon = DEFAULT_ICON;
-          
+
           if (tags.amenity && tags.amenity.match(/hospital|clinic/)) { catName = 'Hospital'; catId = 'hospital'; Icon = Stethoscope; }
           else if (tags.amenity === 'pharmacy') { catName = 'Pharmacy'; catId = 'pharmacy'; Icon = ShoppingBag; }
-          else if (tags.amenity && tags.amenity.match(/bank|atm/)) { catName = tags.amenity==='atm'?'ATM':'Bank'; catId = 'bank'; Icon = Landmark; }
+          else if (tags.amenity && tags.amenity.match(/bank|atm/)) { catName = tags.amenity === 'atm' ? 'ATM' : 'Bank'; catId = 'bank'; Icon = Landmark; }
           else if (tags.amenity && tags.amenity.match(/restaurant|cafe|fast_food/)) { catName = 'Restaurant'; catId = 'restaurant'; Icon = UtensilsCrossed; }
           else if (tags.shop && tags.shop.match(/supermarket|convenience|grocery/)) { catName = 'Supermarket'; catId = 'supermarket'; Icon = ShoppingBag; }
           else if (tags.amenity === 'fuel') { catName = 'Fuel Station'; catId = 'fuel'; Icon = Fuel; }
-          
+
           const name = tags.name || tags.operator || tags.brand || `${catName} (Unnamed)`;
           const addressParts = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']].filter(Boolean);
           const address = addressParts.length > 0 ? addressParts.join(', ') : 'Address not available';
@@ -204,7 +204,7 @@ export default function Essentials() {
           };
         })
         .filter(s => s.distance_km <= searchRadius)
-        .sort((a,b) => a.distance_km - b.distance_km);
+        .sort((a, b) => a.distance_km - b.distance_km);
 
       // Reset marker refs on new fetch
       markerRefs.current = {};
@@ -237,9 +237,8 @@ export default function Essentials() {
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <button
               onClick={() => setSelectedCategory('')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                !selectedCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${!selectedCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               All
             </button>
@@ -249,9 +248,8 @@ export default function Essentials() {
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                    selectedCategory === cat.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${selectedCategory === cat.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
                 >
                   <Icon size={12} />
                   {cat.name}
@@ -296,9 +294,8 @@ export default function Essentials() {
                   <div
                     key={s.id}
                     onClick={() => setSelectedService(s)}
-                    className={`bg-white rounded-xl border p-4 cursor-pointer transition-all animate-fade-in hover:shadow-card ${
-                      selectedService?.id === s.id ? 'border-primary ring-2 ring-primary/10' : 'border-border'
-                    }`}
+                    className={`bg-white rounded-xl border p-4 cursor-pointer transition-all animate-fade-in hover:shadow-card ${selectedService?.id === s.id ? 'border-primary ring-2 ring-primary/10' : 'border-border'
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
@@ -340,7 +337,7 @@ export default function Essentials() {
           </div>
 
           {/* Map */}
-          <div className="rounded-2xl overflow-hidden border border-border h-full min-h-[400px]">
+          <div className="rounded-2xl overflow-hidden border border-border h-full min-h-[10rem]">
             <MapContainer
               center={[userLocation.lat, userLocation.lng]}
               zoom={13}
@@ -370,14 +367,11 @@ export default function Essentials() {
                 showCoverageOnHover={false}
               >
                 {services.map((s) => s.latitude && s.longitude && (
-                  <Marker 
-                    key={s.id} 
+                  <Marker
+                    key={s.id}
                     position={[parseFloat(s.latitude), parseFloat(s.longitude)]}
                     icon={getMarkerIcon(s.category_id)}
-                    eventHandlers={{
-                      mouseover: (e) => { const el = e.target.getElement(); if (el) el.classList.add('hovered-marker'); },
-                      mouseout: (e) => { const el = e.target.getElement(); if (el) el.classList.remove('hovered-marker'); }
-                    }}
+
                     ref={(ref) => {
                       if (ref) markerRefs.current[s.id] = ref;
                     }}
