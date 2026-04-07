@@ -104,3 +104,97 @@ export const getPropertyReviews = asyncHandler(async (req, res) => {
     },
   });
 });
+
+/**
+ * PUT /api/reviews/:id
+ * Edit own review (rating + comment only — booking/property are immutable)
+ */
+export const updateReview = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { rating, comment } = req.body;
+
+  if (!rating) {
+    throw new AppError('Rating is required', 400);
+  }
+
+  if (rating < 1 || rating > 5) {
+    throw new AppError('Rating must be between 1 and 5', 400);
+  }
+
+  // Fetch the review and verify ownership in one shot
+  const existing = await query(
+    `SELECT r.*, p.title AS property_title, p.owner_id
+     FROM reviews r
+     JOIN properties p ON r.property_id = p.id
+     WHERE r.id = $1`,
+    [id]
+  );
+
+  if (!existing.rows[0]) {
+    throw new AppError('Review not found', 404);
+  }
+
+  if (existing.rows[0].reviewer_id !== req.user.id) {
+    throw new AppError('You can only edit your own reviews', 403);
+  }
+
+  const review = existing.rows[0];
+
+  // Update review
+  const { rows } = await query(
+    `UPDATE reviews
+     SET rating = $1, comment = $2
+     WHERE id = $3
+     RETURNING *`,
+    [rating, comment || null, id]
+  );
+
+  // Notify property owner about the edit
+  await query(locationQueries.createNotification, [
+    review.owner_id,
+    'review_updated',
+    'Review Updated',
+    `A guest updated their review on "${review.property_title}" to ${rating} stars.`,
+    JSON.stringify({ property_id: review.property_id, review_id: id }),
+  ]);
+
+  res.json({ success: true, review: rows[0] });
+});
+
+/**
+ * GET /api/reviews/eligibility/:propertyId
+ * Check if the current user has a confirmed booking to allow reviewing,
+ * and fetch their existing review if they have one.
+ */
+export const checkEligibility = asyncHandler(async (req, res) => {
+  const { propertyId } = req.params;
+
+  // 1. Check if user has a valid booking for this property
+  const bookingCheck = await query(
+    `SELECT id FROM bookings
+     WHERE user_id = $1 AND property_id = $2 
+       AND status IN ('confirmed', 'completed')
+     ORDER BY created_at DESC LIMIT 1`,
+    [req.user.id, propertyId]
+  );
+
+  if (bookingCheck.rows.length === 0) {
+    return res.json({ success: true, canReview: false });
+  }
+
+  const bookingId = bookingCheck.rows[0].id;
+
+  // 2. Check if they already wrote a review
+  const reviewCheck = await query(
+    `SELECT * FROM reviews 
+     WHERE reviewer_id = $1 AND property_id = $2`,
+    [req.user.id, propertyId]
+  );
+
+  return res.json({
+    success: true,
+    canReview: true,
+    bookingId,
+    existingReview: reviewCheck.rows[0] || null
+  });
+});

@@ -20,32 +20,126 @@ import { sendEmail } from '../config/email.js';
  * POST /api/bookings
  * Create a new booking — flow determined by booking_type
  */
+// export const createBooking = asyncHandler(async (req, res) => {
+//   const {
+//     property_id, booking_type, check_in, check_out,
+//     guests, total_price, message
+//   } = req.body;
+
+//   // Determine initial status based on booking type
+//   let status;
+//   switch (booking_type) {
+//     case 'hotel_pay_now':
+//       status = 'confirmed'; // Will become confirmed after payment
+//       break;
+//     case 'hotel_pay_at_property':
+//       status = 'confirmed'; // Confirmed immediately (pay later)
+//       break;
+//     case 'short_term_instant':
+//       status = 'confirmed'; // Instant book = auto confirmed
+//       break;
+//     case 'short_term_request':
+//       status = 'pending'; // Needs owner approval
+//       break;
+//     case 'long_term_inquiry':
+//       status = 'pending'; // Needs owner response
+//       break;
+//     default:
+//       throw new AppError('Invalid booking type', 400);
+//   }
+
+//   const client = await getClient();
+
+//   try {
+//     await client.query('BEGIN');
+
+//     // Create the booking
+//     const { rows } = await client.query(bookingQueries.create, [
+//       property_id, req.user.id, booking_type,
+//       check_in || null, check_out || null,
+//       guests || 1, total_price || null, status, message || null
+//     ]);
+
+//     const booking = rows[0];
+
+//     // For short-term request bookings, create a booking request
+//     if (booking_type === 'short_term_request') {
+//       await client.query(bookingQueries.createRequest, [
+//         booking.id, message || 'I would like to book this property.'
+//       ]);
+//     }
+
+//     await client.query('COMMIT');
+
+//     // Send notification email to owner
+//     const propertyResult = await query(
+//       `SELECT p.title, p.owner_id, u.email AS owner_email, u.name AS owner_name
+//        FROM properties p JOIN users u ON p.owner_id = u.id WHERE p.id = $1`,
+//       [property_id]
+//     );
+
+//     if (propertyResult.rows[0]) {
+//       const prop = propertyResult.rows[0];
+//       // Create in-app notification
+//       await query(locationQueries.createNotification, [
+//         prop.owner_id,
+//         'new_booking',
+//         'New Booking Request',
+//         `You have a new ${booking_type.replace(/_/g, ' ')} booking for "${prop.title}"`,
+//         JSON.stringify({ booking_id: booking.id, property_id })
+//       ]);
+
+//       // Send email
+//       await sendEmail({
+//         to: prop.owner_email,
+//         subject: `New Booking for "${prop.title}" — MoveMate`,
+//         html: `
+//           <h2>New Booking Request</h2>
+//           <p>Hi ${prop.owner_name},</p>
+//           <p>You have a new <strong>${booking_type.replace(/_/g, ' ')}</strong> booking for your property <strong>"${prop.title}"</strong>.</p>
+//           <p>Check-in: ${check_in || 'TBD'} | Check-out: ${check_out || 'TBD'}</p>
+//           <p>Please log in to MoveMate to review and respond.</p>
+//           <br/>
+//           <p>— MoveMate Team</p>
+//         `,
+//       });
+//     }
+
+//     res.status(201).json({ success: true, booking });
+//   } catch (error) {
+//     await client.query('ROLLBACK');
+//     throw error;
+//   } finally {
+//     client.release();
+//   }
+// });
+
+/**
+ * POST /api/bookings
+ * Create a new booking — flow determined by booking_type
+ */
+/**
+* POST /api/bookings
+* Create a new booking — flow determined by booking_type
+*/
 export const createBooking = asyncHandler(async (req, res) => {
   const {
-    property_id, booking_type, check_in, check_out,
-    guests, total_price, message
+    property_id,
+    booking_type,
+    check_in,
+    check_out,
+    guests = 1,
+    total_price,
+    message,
+    min_months
   } = req.body;
 
-  // Determine initial status based on booking type
-  let status;
-  switch (booking_type) {
-    case 'hotel_pay_now':
-      status = 'confirmed'; // Will become confirmed after payment
-      break;
-    case 'hotel_pay_at_property':
-      status = 'confirmed'; // Confirmed immediately (pay later)
-      break;
-    case 'short_term_instant':
-      status = 'confirmed'; // Instant book = auto confirmed
-      break;
-    case 'short_term_request':
-      status = 'pending'; // Needs owner approval
-      break;
-    case 'long_term_inquiry':
-      status = 'pending'; // Needs owner response
-      break;
-    default:
-      throw new AppError('Invalid booking type', 400);
+  // Determine initial status
+  let status = 'pending';
+  if (booking_type === 'hotel_pay_now' ||
+    booking_type === 'hotel_pay_at_property' ||
+    booking_type === 'short_term_instant') {
+    status = 'confirmed';
   }
 
   const client = await getClient();
@@ -53,67 +147,96 @@ export const createBooking = asyncHandler(async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Create the booking
+    // Create booking
     const { rows } = await client.query(bookingQueries.create, [
-      property_id, req.user.id, booking_type,
-      check_in || null, check_out || null,
-      guests || 1, total_price || null, status, message || null
+      property_id,
+      req.user.id,
+      booking_type,
+      check_in || null,
+      check_out || null,
+      guests,
+      total_price && total_price > 0 ? total_price : null,
+      status,
+      message || null,
+      booking_type === 'long_term_inquiry' ? (min_months || 6) : null
     ]);
 
     const booking = rows[0];
 
-    // For short-term request bookings, create a booking request
+    // Optional: Create child record for request flow
     if (booking_type === 'short_term_request') {
       await client.query(bookingQueries.createRequest, [
-        booking.id, message || 'I would like to book this property.'
+        booking.id,
+        message || 'I would like to book this property.'
       ]);
     }
 
     await client.query('COMMIT');
 
-    // Send notification email to owner
-    const propertyResult = await query(
-      `SELECT p.title, p.owner_id, u.email AS owner_email, u.name AS owner_name
-       FROM properties p JOIN users u ON p.owner_id = u.id WHERE p.id = $1`,
-      [property_id]
-    );
+    // ===================== SEND NOTIFICATIONS =====================
+    const propertyResult = await query(`
+      SELECT p.title, p.owner_id, 
+             u.name AS owner_name, u.email AS owner_email
+      FROM properties p 
+      JOIN users u ON p.owner_id = u.id 
+      WHERE p.id = $1
+    `, [property_id]);
 
     if (propertyResult.rows[0]) {
       const prop = propertyResult.rows[0];
-      // Create in-app notification
+
+      const bookingTypeLabel = booking_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+      // In-app notification
       await query(locationQueries.createNotification, [
         prop.owner_id,
         'new_booking',
         'New Booking Request',
-        `You have a new ${booking_type.replace(/_/g, ' ')} booking for "${prop.title}"`,
+        `New ${bookingTypeLabel} for "${prop.title}"`,
         JSON.stringify({ booking_id: booking.id, property_id })
       ]);
 
-      // Send email
+      // Email to owner
+      let emailBody = `
+        <h2>New Booking — ${bookingTypeLabel}</h2>
+        <p>Hi ${prop.owner_name},</p>
+        <p>You have a new booking request for <strong>"${prop.title}"</strong>.</p>
+        <p><strong>Type:</strong> ${bookingTypeLabel}</p>
+      `;
+
+      if (check_in) emailBody += `<p><strong>Check-in / Move-in:</strong> ${check_in}</p>`;
+      if (check_out) emailBody += `<p><strong>Check-out:</strong> ${check_out}</p>`;
+      if (min_months) emailBody += `<p><strong>Minimum Stay:</strong> ${min_months} months</p>`;
+
+      emailBody += `
+        <p>Please log in to your MoveMate Owner Dashboard to review and respond.</p>
+        <br/>
+        <p>— MoveMate Team</p>
+      `;
+
       await sendEmail({
         to: prop.owner_email,
-        subject: `New Booking for "${prop.title}" — MoveMate`,
-        html: `
-          <h2>New Booking Request</h2>
-          <p>Hi ${prop.owner_name},</p>
-          <p>You have a new <strong>${booking_type.replace(/_/g, ' ')}</strong> booking for your property <strong>"${prop.title}"</strong>.</p>
-          <p>Check-in: ${check_in || 'TBD'} | Check-out: ${check_out || 'TBD'}</p>
-          <p>Please log in to MoveMate to review and respond.</p>
-          <br/>
-          <p>— MoveMate Team</p>
-        `,
+        subject: `New ${bookingTypeLabel} — "${prop.title}" — MoveMate`,
+        html: emailBody,
       });
     }
 
-    res.status(201).json({ success: true, booking });
+    res.status(201).json({
+      success: true,
+      booking,
+      message: booking_type.includes('inquiry') || booking_type.includes('request')
+        ? 'Interest expressed successfully!'
+        : 'Booking created successfully!'
+    });
+
   } catch (error) {
     await client.query('ROLLBACK');
-    throw error;
+    console.error('Booking creation error:', error);
+    throw new AppError(error.message || 'Failed to create booking', 500);
   } finally {
     client.release();
   }
 });
-
 /**
  * GET /api/bookings
  * Get user's bookings (or owner's received bookings)

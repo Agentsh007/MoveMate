@@ -12,12 +12,10 @@ export const bookingAPI = {
   pay: (id, data) => api.post(`/bookings/${id}/pay`, data),
   scheduleVisit: (id, data) => api.post(`/bookings/${id}/visit`, data),
   createAgreement: (id, data) => api.post(`/bookings/${id}/agreement`, data),
+  createStripeSession: (data) => api.post('/bookings/create-stripe-session', data),
 };
 
-export const reviewAPI = {
-  create: (data) => api.post('/reviews', data),
-  getByProperty: (propertyId) => api.get(`/reviews/property/${propertyId}`),
-};
+
 
 export const savedAPI = {
   list: () => api.get('/saved-listings'),

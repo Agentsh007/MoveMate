@@ -22,7 +22,8 @@ router.post('/', protect, ownerOnly, createProperty);
 router.get('/:id', optionalAuth, getPropertyDetail);
 
 // Owner-only property management
-router.put('/:id', protect, ownerOnly, updateProperty);
+// router.put('/:id', protect, ownerOnly, updateProperty);
+router.patch('/:id', protect, ownerOnly, updateProperty);
 router.delete('/:id', protect, ownerOnly, deleteProperty);
 
 // Image management

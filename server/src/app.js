@@ -70,7 +70,7 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// ---- API Routes ----
+// ---- API Routes Mounting----
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);

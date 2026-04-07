@@ -4,28 +4,49 @@
 
 import { useState, useEffect } from 'react';
 import { Star, MessageSquare, Loader2 } from 'lucide-react';
-import { reviewAPI } from '../../api/booking.api';
+import { reviewAPI } from '../../api/review.api';
 import { timeAgo } from '../../utils/formatDate';
+import useAuthStore from '../../store/authStore';
+import ReviewForm from './ReviewForm';
 
 export default function ReviewSection({ propertyId }) {
+  const { user } = useAuthStore();
   const [reviews, setReviews] = useState([]);
   const [summary, setSummary] = useState({ count: 0, average: 0, breakdown: {} });
   const [loading, setLoading] = useState(true);
+  const [eligibility, setEligibility] = useState(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(true);
+
+  const fetchReviews = async () => {
+    try {
+      const { data } = await reviewAPI.getByProperty(propertyId);
+      setReviews(data.reviews);
+      setSummary(data.summary);
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEligibility = async () => {
+    if (!user) return;
+    try {
+      const { data } = await reviewAPI.checkEligibility(propertyId);
+      setEligibility(data);
+    } catch (err) {
+      console.error('Failed to check eligibility:', err);
+    } finally {
+      setEligibilityLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const { data } = await reviewAPI.getByProperty(propertyId);
-        setReviews(data.reviews);
-        setSummary(data.summary);
-      } catch (err) {
-        console.error('Failed to fetch reviews:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (propertyId) fetchReviews();
-  }, [propertyId]);
+    if (propertyId) {
+      fetchReviews();
+      fetchEligibility();
+    }
+  }, [propertyId, user]);
 
   if (loading) {
     return (
@@ -52,18 +73,46 @@ export default function ReviewSection({ propertyId }) {
       <h2 className="text-xl font-heading font-bold text-gray-900 mb-6 flex items-center gap-2">
         <MessageSquare size={20} />
         Reviews
-        <span className="text-sm font-normal text-muted">({summary.count})</span>
+        <span className="text-sm font-normal text-muted">({summary?.count || 0})</span>
       </h2>
 
-      {summary.count > 0 ? (
+      {!user ? (
+        <div className="bg-gray-50 border border-border rounded-xl p-6 text-center mb-8">
+          <p className="text-gray-600 text-sm">
+            Please <span className="font-semibold text-primary">Log in</span> to leave a review for this property.
+          </p>
+        </div>
+      ) : eligibilityLoading ? (
+        <p className="text-sm text-muted">
+          Checking review eligibility...
+        </p>
+      ) : eligibility?.canReview ? (
+        <ReviewForm
+          propertyId={propertyId}
+          bookingId={eligibility.bookingId}
+          existingReview={eligibility.existingReview}
+          onReviewSubmitted={() => {
+            fetchReviews();
+            fetchEligibility();
+          }}
+        />
+      ) : (
+        <div className="bg-gray-50 border border-border rounded-xl p-6 text-center mb-8">
+          <p className="text-gray-600 text-sm">
+            Only guests with a confirmed booking can leave a review.
+          </p>
+        </div>
+      )}
+
+      {summary?.count > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Summary Card */}
           <div className="bg-white rounded-2xl border border-border p-6">
             <div className="text-center mb-4">
               <p className="text-4xl font-heading font-bold text-gray-900">
-                {parseFloat(summary.average).toFixed(1)}
+                {parseFloat(summary.average || 0).toFixed(1)}
               </p>
-              <div className="flex justify-center mt-1">{renderStars(Math.round(summary.average))}</div>
+              <div className="flex justify-center mt-1">{renderStars(Math.round(summary.average || 0))}</div>
               <p className="text-sm text-muted mt-1">{summary.count} review{summary.count !== 1 ? 's' : ''}</p>
             </div>
 

@@ -176,8 +176,8 @@ export default function Listings() {
                         key={value}
                         onClick={() => updateFilter('type', filters.type === value ? '' : value)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filters.type === value
-                            ? 'bg-primary text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'bg-primary text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
                       >
                         {label}
@@ -216,8 +216,8 @@ export default function Listings() {
                         key={val}
                         onClick={() => updateFilter('bedrooms', filters.bedrooms === val ? '' : val)}
                         className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${filters.bedrooms === val
-                            ? 'bg-primary text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'bg-primary text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
                       >
                         {val || 'Any'}
@@ -272,8 +272,8 @@ export default function Listings() {
                           <button
                             onClick={() => setFilters(prev => ({ ...prev, page }))}
                             className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${pagination.page === page
-                                ? 'bg-primary text-white'
-                                : 'border border-border hover:bg-gray-50'
+                              ? 'bg-primary text-white'
+                              : 'border border-border hover:bg-gray-50'
                               }`}
                           >
                             {page}

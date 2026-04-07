@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   total_price  NUMERIC(10, 2),
   status       booking_status DEFAULT 'draft',
   message      TEXT,       -- User's message to owner
-  created_at   TIMESTAMP DEFAULT NOW()
+  created_at   TIMESTAMP DEFAULT NOW(),
+  min_months INTEGER 
 );
 
 -- For short-term request bookings: tracks owner response

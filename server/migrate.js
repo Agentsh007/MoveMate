@@ -28,17 +28,17 @@ const pool = new Pool({
   host: 'aws-1-ap-northeast-1.pooler.supabase.com',
   port: 5432,
   database: 'postgres',
-  user: 'postgres.mitwtomranufdkxmzkfg',
-  password: 'DaY4al7Asusbj6EL',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   ssl: { rejectUnauthorized: false },
 });
 
 async function runMigrations() {
   const client = await pool.connect();
-  
+
   try {
     const migrationsDir = path.join(__dirname, 'migrations');
-    
+
     // Read all .sql files and sort them by number prefix
     const files = fs.readdirSync(migrationsDir)
       .filter(f => f.endsWith('.sql'))
@@ -49,7 +49,7 @@ async function runMigrations() {
     for (const file of files) {
       const filePath = path.join(migrationsDir, file);
       const sql = fs.readFileSync(filePath, 'utf-8');
-      
+
       console.log(`  ▶ ${file}...`);
       await client.query(sql);
       console.log(`  ✅ ${file} — done`);

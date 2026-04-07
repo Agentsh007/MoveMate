@@ -25,7 +25,7 @@ EXCEPTION WHEN duplicate_object THEN null;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE property_status AS ENUM ('active', 'inactive', 'pending_review');
+  CREATE TYPE property_status AS ENUM ('active', 'inactive', 'pending_review', 'deleted');
 EXCEPTION WHEN duplicate_object THEN null;
 END $$;
 
@@ -48,7 +48,9 @@ CREATE TABLE IF NOT EXISTS properties (
   price_unit     price_unit NOT NULL,
   instant_book   BOOLEAN DEFAULT FALSE,
   status         property_status DEFAULT 'active',
-  created_at     TIMESTAMP DEFAULT NOW()
+  created_at     TIMESTAMP DEFAULT NOW(),
+  updated_at     TIMESTAMP DEFAULT NOW(),
+  deleted_at     TIMESTAMP WITH TIME ZONE
 );
 
 -- Multiple images per property — display_order controls carousel order

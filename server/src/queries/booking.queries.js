@@ -5,8 +5,8 @@
 export const bookingQueries = {
   // Create a booking
   create: `
-    INSERT INTO bookings (property_id, user_id, booking_type, check_in, check_out, guests, total_price, status, message)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    INSERT INTO bookings (property_id, user_id, booking_type, check_in, check_out, guests, total_price, status, message, min_months)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *
   `,
 

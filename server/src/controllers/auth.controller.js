@@ -103,8 +103,8 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   const user = rows[0];
-
   res.json({
+
     success: true,
     message: 'Login successful',
     user: {
@@ -117,6 +117,7 @@ export const login = asyncHandler(async (req, res) => {
     accessToken: data.session.access_token,
     refreshToken: data.session.refresh_token,
   });
+  console.log(data + " " + user + " " + rows)
 });
 
 /**
@@ -168,7 +169,7 @@ export const logout = asyncHandler(async (req, res) => {
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
-    await supabaseAdmin.auth.admin.signOut(token).catch(() => {});
+    await supabaseAdmin.auth.admin.signOut(token).catch(() => { });
   }
 
   res.json({ success: true, message: 'Logged out successfully' });

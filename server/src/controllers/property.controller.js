@@ -230,50 +230,355 @@ export const createProperty = asyncHandler(async (req, res) => {
  * PUT /api/properties/:id
  * Update a property (owner only)
  */
+// export const updateProperty = asyncHandler(async (req, res) => {
+//   const { id } = req.params;
+//   const {
+//     title, description, property_type, booking_model,
+//     address, city, latitude, longitude, bedrooms, bathrooms,
+//     area_sqft, max_guests, base_price, price_unit,
+//     instant_book, status, amenities, rules
+//   } = req.body;
+
+//   const client = await getClient();
+
+//   try {
+//     await client.query('BEGIN');
+
+//     const { rows } = await client.query(propertyQueries.update, [
+//       id, title, description, property_type, booking_model,
+//       address, city, latitude, longitude, bedrooms, bathrooms,
+//       area_sqft, max_guests, base_price, price_unit,
+//       instant_book, status || 'active', req.user.id
+//     ]);
+
+//     if (!rows[0]) {
+//       throw new AppError('Property not found or not authorized', 404);
+//     }
+
+//     // Replace amenities
+//     if (amenities && Array.isArray(amenities)) {
+//       await client.query(propertyQueries.deleteAmenities, [id]);
+//       for (const name of amenities) {
+//         await client.query(propertyQueries.addAmenity, [id, name]);
+//       }
+//     }
+
+//     // Replace rules
+//     if (rules && Array.isArray(rules)) {
+//       await client.query(propertyQueries.deleteRules, [id]);
+//       for (const ruleText of rules) {
+//         await client.query(propertyQueries.addRule, [id, ruleText]);
+//       }
+//     }
+
+//     await client.query('COMMIT');
+
+//     res.json({ success: true, property: rows[0] });
+//   } catch (error) {
+//     await client.query('ROLLBACK');
+//     throw error;
+//   } finally {
+//     client.release();
+//   }
+// });
+
+/**
+ * PATCH /api/properties/:id
+ * Update property (partial + amenities/rules)
+ */
 export const updateProperty = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const {
     title, description, property_type, booking_model,
     address, city, latitude, longitude, bedrooms, bathrooms,
     area_sqft, max_guests, base_price, price_unit,
-    instant_book, status, amenities, rules
+    instant_book, status,
+    amenities, rules
   } = req.body;
+
+  console.log(`🔄 Updating property ${id} by user ${req.user.id}`);
+  console.log('📥 Received fields:', Object.keys(req.body).filter(k => req.body[k] !== undefined));
+
+  const client = await getClient();
+  // ==================== CRITICAL: Verify this user owns this property ====================
+  const { rows: ownershipCheck } = await client.query(
+    `SELECT owner_id FROM properties WHERE id = $1`,
+    [id]
+  );
+
+  if (ownershipCheck.length === 0) {
+    throw new AppError('Property not found', 404);
+  }
+
+  if (ownershipCheck[0].owner_id !== req.user.id) {
+    console.log(`🚫 Unauthorized access attempt: User ${req.user.id} tried to modify property owned by ${ownershipCheck[0].owner_id}`);
+    throw new AppError('You can only update your own properties', 403);
+  }
+
+  console.log(`✅ Ownership verified`);
+  try {
+    await client.query('BEGIN');
+
+    let updated = false;
+
+    // ===================== 1. UPDATE MAIN PROPERTY FIELDS =====================
+    const fieldMap = {
+      title, description, property_type, booking_model,
+      address, city, latitude, longitude, bedrooms, bathrooms,
+      area_sqft, max_guests, base_price, price_unit,
+      instant_book, status
+    };
+
+    const setClauses = [];
+    const params = [id, req.user.id]; // $1 = id, $2 = owner_id
+    let paramIndex = 3;
+
+    for (const [field, value] of Object.entries(fieldMap)) {
+      if (value !== undefined && value !== null) {
+        setClauses.push(`${field} = $${paramIndex}`);
+        params.push(value);
+        paramIndex++;
+      }
+    }
+
+    if (setClauses.length > 0) {
+      const queryText = `
+        UPDATE properties 
+        SET ${setClauses.join(', ')}, updated_at = NOW()
+        WHERE id = $1 AND owner_id = $2
+        RETURNING *
+      `;
+
+      console.log('📤 Executing UPDATE:', queryText);
+      console.log('📤 Parameters:', params);
+
+      const { rows, rowCount } = await client.query(queryText, params);
+
+      console.log(`✅ Main fields updated — rows affected: ${rowCount}`);
+
+      if (rowCount === 0) {
+        throw new AppError('Property not found or you are not the owner', 403);
+      }
+      updated = true;
+    }
+
+    // ===================== 2. UPDATE AMENITIES (full replace) =====================
+    if (amenities !== undefined) {
+      await client.query(propertyQueries.deleteAmenities, [id]);
+
+      if (Array.isArray(amenities) && amenities.length > 0) {
+        for (const name of amenities) {
+          if (name?.trim()) {
+            await client.query(propertyQueries.addAmenity, [id, name.trim()]);
+          }
+        }
+      }
+      console.log(`✅ Amenities updated (${amenities.length} items)`);
+      updated = true;
+    }
+
+    // ===================== 3. UPDATE RULES (full replace) =====================
+    if (rules !== undefined) {
+      await client.query(propertyQueries.deleteRules, [id]);
+
+      if (Array.isArray(rules) && rules.length > 0) {
+        for (const ruleText of rules) {
+          if (ruleText?.trim()) {
+            await client.query(propertyQueries.addRule, [id, ruleText.trim()]);
+          }
+        }
+      }
+      console.log(`✅ Rules updated (${rules.length} items)`);
+      updated = true;
+    }
+
+    if (!updated) {
+      throw new AppError('No fields were provided to update', 400);
+    }
+
+    await client.query('COMMIT');
+    console.log('✅ Transaction committed successfully');
+
+    // ===================== FETCH FRESH DATA =====================
+    const [propRes, amenRes, ruleRes] = await Promise.all([
+      query('SELECT * FROM properties WHERE id = $1', [id]),
+      query('SELECT name FROM property_amenities WHERE property_id = $1 ORDER BY name', [id]),
+      query('SELECT rule_text FROM property_rules WHERE property_id = $1 ORDER BY rule_text', [id])
+    ]);
+
+    const freshProperty = {
+      ...propRes.rows[0],
+      amenities: amenRes.rows.map(a => a.name),
+      rules: ruleRes.rows.map(r => r.rule_text)
+    };
+
+    console.log('📤 Returning fresh data →', freshProperty.title);
+
+    res.json({
+      success: true,
+      message: 'Property updated successfully',
+      property: freshProperty
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Update failed:', error.message);
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
+
+
+/**
+ * 
+ * DELETE /api/properties/:id
+ * Delete a property (owner only)
+ */
+// export const deleteProperty = asyncHandler(async (req, res) => {
+//   const { rows } = await query(propertyQueries.delete, [req.params.id, req.user.id]);
+
+//   if (!rows[0]) {
+//     throw new AppError('Property not found or not authorized', 404);
+//   }
+
+//   res.json({ success: true, message: 'Property deleted' });
+// });
+
+/**
+ * DELETE /api/properties/:id
+ * Soft delete with safety checks (Standard Approach)
+ */
+// export const deleteProperty = asyncHandler(async (req, res) => {
+//   const propertyId = req.params.id;
+//   const userId = req.user.id;
+
+//   const client = await getClient();
+
+//   try {
+//     await client.query('BEGIN');
+
+//     // Verify ownership
+//     const { rows: prop } = await client.query(
+//       `SELECT owner_id FROM properties WHERE id = $1 AND deleted_at IS NULL`,
+//       [propertyId]
+//     );
+
+//     if (prop.length === 0) {
+//       throw new AppError('Property not found or already deleted', 404);
+//     }
+//     if (prop[0].owner_id !== userId) {
+//       throw new AppError('You can only delete your own properties', 403);
+//     }
+
+//     // Check for future/active bookings
+//     const { rows: futureBookings } = await client.query(`
+//       SELECT id FROM bookings 
+//       WHERE property_id = $1 
+//         AND check_in >= CURRENT_DATE 
+//         AND status NOT IN ('cancelled', 'rejected')
+//     `, [propertyId]);
+
+//     if (futureBookings.length > 0) {
+//       throw new AppError(
+//         'Cannot delete this property. It has upcoming or active bookings. Please cancel them first.',
+//         400
+//       );
+//     }
+
+//     // Soft delete the property
+//     await client.query(
+//       `UPDATE properties 
+//        SET deleted_at = NOW(), 
+//            status = 'deleted' 
+//        WHERE id = $1 AND owner_id = $2`,
+//       [propertyId, userId]
+//     );
+
+//     // Clean up non-critical data
+//     await client.query(`DELETE FROM property_images WHERE property_id = $1`, [propertyId]);
+//     await client.query(`DELETE FROM property_amenities WHERE property_id = $1`, [propertyId]);
+//     await client.query(`DELETE FROM property_rules WHERE property_id = $1`, [propertyId]);
+//     await client.query(`DELETE FROM saved_listings WHERE property_id = $1`, [propertyId]);
+
+//     await client.query('COMMIT');
+
+//     res.json({
+//       success: true,
+//       message: 'Property has been deleted successfully. Past bookings and reviews are preserved.'
+//     });
+
+//   } catch (error) {
+//     await client.query('ROLLBACK');
+//     throw error;
+//   } finally {
+//     client.release();
+//   }
+// });
+/**
+ * DELETE /api/properties/:id
+ * Soft delete with safety checks (Standard Approach)
+ */
+export const deleteProperty = asyncHandler(async (req, res) => {
+  const propertyId = req.params.id;
+  const userId = req.user.id;
 
   const client = await getClient();
 
   try {
     await client.query('BEGIN');
 
-    const { rows } = await client.query(propertyQueries.update, [
-      id, title, description, property_type, booking_model,
-      address, city, latitude, longitude, bedrooms, bathrooms,
-      area_sqft, max_guests, base_price, price_unit,
-      instant_book, status || 'active', req.user.id
-    ]);
+    // Verify ownership
+    const { rows: prop } = await client.query(
+      `SELECT owner_id FROM properties WHERE id = $1 AND deleted_at IS NULL`,
+      [propertyId]
+    );
 
-    if (!rows[0]) {
-      throw new AppError('Property not found or not authorized', 404);
+    if (prop.length === 0) {
+      throw new AppError('Property not found or already deleted', 404);
+    }
+    if (prop[0].owner_id !== userId) {
+      throw new AppError('You can only delete your own properties', 403);
     }
 
-    // Replace amenities
-    if (amenities && Array.isArray(amenities)) {
-      await client.query(propertyQueries.deleteAmenities, [id]);
-      for (const name of amenities) {
-        await client.query(propertyQueries.addAmenity, [id, name]);
-      }
+    // Check for future/active bookings
+    const { rows: futureBookings } = await client.query(`
+      SELECT id FROM bookings 
+      WHERE property_id = $1 
+        AND check_in >= CURRENT_DATE 
+        AND status NOT IN ('cancelled', 'rejected')
+    `, [propertyId]);
+
+    if (futureBookings.length > 0) {
+      throw new AppError(
+        'Cannot delete this property. It has upcoming or active bookings. Please cancel them first.',
+        400
+      );
     }
 
-    // Replace rules
-    if (rules && Array.isArray(rules)) {
-      await client.query(propertyQueries.deleteRules, [id]);
-      for (const ruleText of rules) {
-        await client.query(propertyQueries.addRule, [id, ruleText]);
-      }
-    }
+    // Soft delete the property
+    await client.query(
+      `UPDATE properties 
+       SET deleted_at = NOW(), 
+           status = 'deleted' 
+       WHERE id = $1 AND owner_id = $2`,
+      [propertyId, userId]
+    );
+
+    // Clean up non-critical data
+    await client.query(`DELETE FROM property_images WHERE property_id = $1`, [propertyId]);
+    await client.query(`DELETE FROM property_amenities WHERE property_id = $1`, [propertyId]);
+    await client.query(`DELETE FROM property_rules WHERE property_id = $1`, [propertyId]);
+    await client.query(`DELETE FROM saved_listings WHERE property_id = $1`, [propertyId]);
 
     await client.query('COMMIT');
 
-    res.json({ success: true, property: rows[0] });
+    res.json({
+      success: true,
+      message: 'Property has been deleted successfully. Past bookings and reviews are preserved.'
+    });
+
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -281,21 +586,6 @@ export const updateProperty = asyncHandler(async (req, res) => {
     client.release();
   }
 });
-
-/**
- * DELETE /api/properties/:id
- * Delete a property (owner only)
- */
-export const deleteProperty = asyncHandler(async (req, res) => {
-  const { rows } = await query(propertyQueries.delete, [req.params.id, req.user.id]);
-
-  if (!rows[0]) {
-    throw new AppError('Property not found or not authorized', 404);
-  }
-
-  res.json({ success: true, message: 'Property deleted' });
-});
-
 /**
  * POST /api/properties/:id/images
  * Upload property images to Supabase Storage
@@ -369,7 +659,7 @@ export const deleteImage = asyncHandler(async (req, res) => {
   if (imageRows[0]?.url?.includes('supabase')) {
     const path = imageRows[0].url.split('/property-images/')[1];
     if (path) {
-      await supabaseAdmin.storage.from('property-images').remove([path]).catch(() => {});
+      await supabaseAdmin.storage.from('property-images').remove([path]).catch(() => { });
     }
   }
 
