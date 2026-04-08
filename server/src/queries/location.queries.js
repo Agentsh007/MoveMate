@@ -139,7 +139,10 @@ export const locationQueries = {
     VALUES ($1, $2, $3, $4, $5)
     RETURNING *
   `,
-
+  deleteNotification: `
+    DELETE FROM notifications WHERE user_id = $1
+    RETURNING *
+  `,
   // === REVIEWS ===
 
   createReview: `

@@ -2,14 +2,21 @@
 // Listings Page — Filters + Property Grid + Pagination
 // =============================================
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
-  SlidersHorizontal, X, Search, MapPin, ChevronLeft, ChevronRight,
-  Building2, Loader2, LayoutGrid, LayoutList
+  Building2,
+  ChevronLeft, ChevronRight,
+  LayoutGrid, LayoutList,
+  Loader2,
+  MapPin,
+  Search,
+  SlidersHorizontal, X
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { propertyAPI } from '../api/property.api';
 import PropertyCard from '../components/property/PropertyCard';
+import { PropertyCardSkeletonGrid } from '../components/shared/LoadingSkeleton';
 import { PROPERTY_TYPES } from '../utils/constants';
 
 export default function Listings() {
@@ -29,6 +36,12 @@ export default function Listings() {
     sort: searchParams.get('sort') || '',
     page: parseInt(searchParams.get('page') || '1'),
   });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['listings'],           // ← same key as prefetchQuery above
+    queryFn: () => propertyAPI.getAll(),
+  });
+
 
   // Fetch properties whenever filters change
   useEffect(() => {
@@ -79,7 +92,7 @@ export default function Listings() {
   const activeFilterCount = Object.entries(filters).filter(
     ([key, val]) => key !== 'page' && key !== 'sort' && val !== ''
   ).length;
-
+  if (isLoading) return <PropertyCardSkeletonGrid />;
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

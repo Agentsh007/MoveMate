@@ -38,3 +38,8 @@ export const markAllRead = asyncHandler(async (req, res) => {
   await query(locationQueries.markAllRead, [req.user.id]);
   res.json({ success: true, message: 'All notifications marked as read' });
 });
+
+export const deleteNotification = asyncHandler(async (req, res) => {
+  const { rows } = await query(locationQueries.deleteNotification, [req.user.id]);
+  res.json({ success: true, message: 'Notification deleted' });
+});
