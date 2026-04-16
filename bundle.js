@@ -1741,6 +1741,10 @@ export const markAllRead = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'All notifications marked as read' });
 });
 
+export const deleteNotification = asyncHandler(async (req, res) => {
+  const { rows } = await query(locationQueries.deleteNotification, [req.user.id]);
+  res.json({ success: true, message: 'Notification deleted' });
+});
 // End of file
 
 // Start of: ./server\src\controllers\property.controller.js
@@ -3155,7 +3159,10 @@ export const locationQueries = {
     VALUES ($1, $2, $3, $4, $5)
     RETURNING *
   `,
-
+  deleteNotification: `
+    DELETE FROM notifications WHERE user_id = $1
+    RETURNING *
+  `,
   // === REVIEWS ===
 
   createReview: `
@@ -3505,15 +3512,15 @@ export default router;
 // Start of: ./server\src\routes\notification.routes.js
 // Notification Routes
 import { Router } from 'express';
-import { getNotifications, markAsRead, markAllRead } from '../controllers/notification.controller.js';
+import { getNotifications, markAsRead, markAllRead, deleteNotification } from '../controllers/notification.controller.js';
 import { protect } from '../middleware/auth.js';
 
 const router = Router();
 
 router.get('/', protect, getNotifications);
+router.delete('/', protect, deleteNotification);
 router.put('/read-all', protect, markAllRead);
 router.put('/:id/read', protect, markAsRead);
-
 export default router;
 
 // End of file

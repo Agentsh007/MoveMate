@@ -1,43 +1,329 @@
+// // =============================================
+// // Emergency Page — Tap-to-Call + Offline-First
+// // =============================================
+// // OFFLINE STRATEGY:
+// // 1. On first load: fetch from API → store in localStorage
+// // 2. On subsequent loads: show localStorage first (instant), then refresh from API
+// // 3. If API fails: gracefully fall back to cached data
+// // =============================================
+
+// import { useState, useEffect } from 'react';
+// import {
+//   Phone, MapPin, AlertTriangle, Shield, Flame, Ambulance,
+//   Zap, Baby, Loader2, RefreshCw, WifiOff, Search, Info
+// } from 'lucide-react';
+// import { emergencyAPI } from '../api/location.api';
+// import { DHAKA_CENTER } from '../utils/constants';
+// import { EmergencyCardSkeleton } from '../components/shared/LoadingSkeleton';
+
+// const NATIONWIDE_NUMBERS = [
+//   { name: 'National Emergency Service (Police, Fire, Ambulance)', phone: '999', icon: AlertTriangle, color: 'from-red-600 to-red-800' },
+//   { name: 'Women & Child Abuse Helpline', phone: '109', icon: Baby, color: 'from-pink-500 to-pink-700' },
+//   { name: 'Disaster Management', phone: '1090', icon: Flame, color: 'from-orange-500 to-orange-700' },
+//   { name: 'Govt. Info & Services', phone: '333', icon: Phone, color: 'from-blue-500 to-blue-700' },
+// ];
+
+// const CATEGORY_ICONS = {
+//   Police: Shield, 'Fire Service': Flame, Ambulance: Ambulance,
+//   'Gas Leak': Zap, "Women's Helpline": Phone, "Child Helpline": Baby,
+//   'Flood / Disaster': AlertTriangle, Default: AlertTriangle,
+// };
+
+// const CATEGORY_COLORS = {
+//   Police: 'from-blue-500 to-blue-700',
+//   'Fire Service': 'from-red-500 to-red-700',
+//   Ambulance: 'from-green-500 to-green-700',
+//   'Gas Leak': 'from-amber-500 to-amber-700',
+//   "Women's Helpline": 'from-pink-500 to-pink-700',
+//   "Child Helpline": 'from-purple-500 to-purple-700',
+//   'Flood / Disaster': 'from-cyan-500 to-cyan-700',
+//   Default: 'from-gray-500 to-gray-700',
+// };
+
+// const CACHE_KEY = 'movemate_emergency_cache';
+
+// export default function Emergency() {
+//   const [categories, setCategories] = useState([]);
+//   const [contacts, setContacts] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [isOffline, setIsOffline] = useState(false);
+//   const [searchQuery, setSearchQuery] = useState('');
+//   const [selectedCategory, setSelectedCategory] = useState('');
+
+//   // Load from cache first, then API
+//   useEffect(() => {
+//     // Step 1: Load from cache immediately
+//     const cached = localStorage.getItem(CACHE_KEY);
+//     if (cached) {
+//       try {
+//         const data = JSON.parse(cached);
+//         setContacts(data.contacts || []);
+//         setCategories(data.categories || []);
+//         setLoading(false);
+//       } catch {}
+//     }
+
+//     // Step 2: Fetch from API
+//     fetchFromAPI();
+//   }, []);
+
+//   const fetchFromAPI = async () => {
+//     try {
+//       // Get user location for location-aware results
+//       let lat = DHAKA_CENTER.lat, lng = DHAKA_CENTER.lng;
+//       try {
+//         const pos = await new Promise((resolve, reject) =>
+//           navigator.geolocation?.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 })
+//         );
+//         lat = pos.coords.latitude;
+//         lng = pos.coords.longitude;
+//       } catch {}
+
+//       const [catRes, contactRes] = await Promise.all([
+//         emergencyAPI.getCategories(),
+//         emergencyAPI.getContacts({ lat, lng }),
+//       ]);
+
+//       const categories = catRes.data.categories || [];
+//       const contacts = contactRes.data.contacts || [];
+
+//       setCategories(categories);
+//       setContacts(contacts);
+//       setIsOffline(false);
+
+//       // Cache for offline use
+//       localStorage.setItem(CACHE_KEY, JSON.stringify({ categories, contacts, cachedAt: Date.now() }));
+//     } catch (err) {
+//       console.error('Emergency fetch failed:', err);
+//       setIsOffline(true);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const getIcon = (name) => CATEGORY_ICONS[name] || CATEGORY_ICONS.Default;
+//   const getColor = (name) => CATEGORY_COLORS[name] || CATEGORY_COLORS.Default;
+
+//   // Filter contacts
+//   const filtered = contacts.filter(c => {
+//     const matchesSearch = !searchQuery ||
+//       c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//       c.phone?.includes(searchQuery);
+//     const matchesCategory = !selectedCategory || c.category_id === selectedCategory;
+//     return matchesSearch && matchesCategory;
+//   });
+
+//   // Group by category
+//   const grouped = {};
+//   filtered.forEach(c => {
+//     const cat = c.category_name || 'Other';
+//     if (!grouped[cat]) grouped[cat] = [];
+//     grouped[cat].push(c);
+//   });
+
+//   return (
+//     <div className="min-h-screen bg-background">
+//       {/* Header */}
+//       <div className="bg-gradient-to-r from-red-600 to-red-700">
+//         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+//           <div className="flex items-center gap-3 mb-3">
+//             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+//               <AlertTriangle size={24} className="text-white" />
+//             </div>
+//             <div>
+//               <h1 className="text-2xl font-heading font-bold text-white">Emergency Contacts</h1>
+//               <p className="text-white/70 text-sm">Tap to call — works offline</p>
+//             </div>
+//           </div>
+
+//           {isOffline && (
+//             <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2 mt-3">
+//               <WifiOff size={14} className="text-white/70" />
+//               <span className="text-xs text-white/70">Showing cached data — tap to refresh</span>
+//               <button onClick={fetchFromAPI} className="ml-auto text-white/90 hover:text-white">
+//                 <RefreshCw size={14} />
+//               </button>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+//         {/* Search + Filter */}
+//         <div className="flex flex-col sm:flex-row gap-3 mb-6">
+//           <div className="relative flex-1">
+//             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+//             <input
+//               type="text"
+//               placeholder="Search by name or number..."
+//               value={searchQuery}
+//               onChange={(e) => setSearchQuery(e.target.value)}
+//               className="input-field !pl-10"
+//             />
+//           </div>
+//           <div className="flex gap-1.5 overflow-x-auto pb-1">
+//             <button
+//               onClick={() => setSelectedCategory('')}
+//               className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+//                 !selectedCategory ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+//               }`}
+//             >
+//               All
+//             </button>
+//             {categories.map(cat => {
+//               const Icon = getIcon(cat.name);
+//               return (
+//                 <button
+//                   key={cat.id}
+//                   onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
+//                   className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+//                     selectedCategory === cat.id ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+//                   }`}
+//                 >
+//                   <Icon size={12} />
+//                   {cat.name}
+//                 </button>
+//               );
+//             })}
+//           </div>
+//         </div>
+
+//         {/* Nationwide Banner */}
+//         {!searchQuery && !selectedCategory && (
+//           <div className="mb-8">
+//             <div className="flex items-center gap-2 mb-3">
+//                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+//                  <AlertTriangle size={16} className="text-red-600" />
+//                </div>
+//                <h2 className="font-heading font-bold text-gray-900">National Emergency Lines</h2>
+//             </div>
+//             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+//               {NATIONWIDE_NUMBERS.map((n, idx) => (
+//                 <a key={idx} href={`tel:${n.phone}`} className={`relative overflow-hidden rounded-xl p-4 text-white hover:scale-[1.02] transition-transform shadow-sm group bg-gradient-to-br ${n.color}`}>
+//                   <div className="absolute right-0 bottom-0 opacity-10 translate-x-4 translate-y-4 group-hover:-translate-x-1 group-hover:-translate-y-1 transition-transform duration-500">
+//                     <n.icon size={80} />
+//                   </div>
+//                   <n.icon size={20} className="mb-2 text-white/90" />
+//                   <p className="text-xs font-medium text-white/80 mb-0.5">{n.name}</p>
+//                   <p className="text-2xl font-bold font-heading">{n.phone}</p>
+//                 </a>
+//               ))}
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Contact Cards */}
+//         {loading ? (
+//           <div className="space-y-4">
+//              <div className="h-6 bg-gray-200 rounded w-40 mb-3 animate-pulse" />
+//              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+//                 {Array.from({ length: 6 }).map((_, i) => <EmergencyCardSkeleton key={i} />)}
+//              </div>
+//           </div>
+//         ) : Object.keys(grouped).length > 0 ? (
+//           <div className="space-y-8">
+//             {Object.entries(grouped).map(([categoryName, categoryContacts]) => {
+//               const Icon = getIcon(categoryName);
+//               const color = getColor(categoryName);
+//               return (
+//                 <div key={categoryName}>
+//                   <div className="flex items-center gap-2 mb-3">
+//                     <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`}>
+//                       <Icon size={16} className="text-white" />
+//                     </div>
+//                     <h2 className="font-heading font-bold text-gray-900">{categoryName}</h2>
+//                     <span className="text-xs text-muted">({categoryContacts.length})</span>
+//                   </div>
+
+//                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+//                     {categoryContacts.map(contact => (
+//                       <a
+//                         key={contact.id}
+//                         href={`tel:${contact.phone}`}
+//                         className="bg-white rounded-xl border border-border p-4 hover:shadow-elevated hover:border-red-200 transition-all group animate-fade-in active:scale-[0.98]"
+//                       >
+//                         <div className="flex items-start justify-between">
+//                           <div className="flex-1 min-w-0">
+//                             <h3 className="font-semibold text-sm text-gray-900 group-hover:text-red-600 transition-colors">
+//                               {contact.name}
+//                             </h3>
+//                             {contact.address && (
+//                               <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+//                                 <MapPin size={10} /> {contact.address}
+//                               </p>
+//                             )}
+//                           </div>
+//                         </div>
+
+//                         <div className="flex items-center gap-2 mt-3 bg-red-50 rounded-lg p-2.5 group-hover:bg-red-100 transition-colors">
+//                           <Phone size={16} className="text-red-600 shrink-0" />
+//                           <span className="text-red-700 font-bold text-sm">{contact.phone}</span>
+//                           <span className="ml-auto text-xs text-red-500 font-medium">TAP TO CALL</span>
+//                         </div>
+
+//                         {contact.available_24h && (
+//                           <p className="text-[10px] text-green-600 font-medium mt-2">● Available 24/7</p>
+//                         )}
+//                       </a>
+//                     ))}
+//                   </div>
+//                 </div>
+//               );
+//             })}
+//           </div>
+//         ) : (
+//           <div className="text-center py-16 bg-white rounded-xl border border-border">
+//             <AlertTriangle size={48} className="mx-auto mb-3 text-gray-300" />
+//             <p className="font-heading font-semibold text-gray-700">No contacts found</p>
+//             <p className="text-sm text-muted mt-1">Try clearing your search filters</p>
+//           </div>
+//         )}
+
+//       </div>
+//     </div>
+//   );
+// }
 // =============================================
-// Emergency Page — Tap-to-Call + Offline-First
+// Emergency Page — Minimalist Design (Tap-to-Call + Offline-First)
 // =============================================
-// OFFLINE STRATEGY:
-// 1. On first load: fetch from API → store in localStorage
-// 2. On subsequent loads: show localStorage first (instant), then refresh from API
-// 3. If API fails: gracefully fall back to cached data
+
+// =============================================
+// Emergency Page — Enhanced Minimalist Design
+// Improved Contrast + Depth + Smooth Animations
+// =============================================
+// =============================================
+// Emergency Page — Enhanced Minimalist Design
+// Improved Contrast + Depth + Smooth Animations
+// =============================================
+// =============================================
+// Emergency Page — Enhanced Minimalist Design
+// Improved Contrast + Depth + Smooth Animations
+// =============================================
+// =============================================
+// Emergency Page — Clean Minimalist Design
+// Fixed Search Bar + Better Visuals
 // =============================================
 
 import { useState, useEffect } from 'react';
 import {
   Phone, MapPin, AlertTriangle, Shield, Flame, Ambulance,
-  Zap, Baby, Loader2, RefreshCw, WifiOff, Search, Info
+  Zap, Baby, RefreshCw, WifiOff, Search
 } from 'lucide-react';
 import { emergencyAPI } from '../api/location.api';
 import { DHAKA_CENTER } from '../utils/constants';
 import { EmergencyCardSkeleton } from '../components/shared/LoadingSkeleton';
 
 const NATIONWIDE_NUMBERS = [
-  { name: 'National Emergency Service (Police, Fire, Ambulance)', phone: '999', icon: AlertTriangle, color: 'from-red-600 to-red-800' },
-  { name: 'Women & Child Abuse Helpline', phone: '109', icon: Baby, color: 'from-pink-500 to-pink-700' },
-  { name: 'Disaster Management', phone: '1090', icon: Flame, color: 'from-orange-500 to-orange-700' },
-  { name: 'Govt. Info & Services', phone: '333', icon: Phone, color: 'from-blue-500 to-blue-700' },
+  { name: 'National Emergency', phone: '999', icon: AlertTriangle },
+  { name: 'Women & Child Helpline', phone: '109', icon: Baby },
+  { name: 'Disaster Management', phone: '1090', icon: Flame },
+  { name: 'Govt. Info Service', phone: '333', icon: Phone },
 ];
 
 const CATEGORY_ICONS = {
   Police: Shield, 'Fire Service': Flame, Ambulance: Ambulance,
   'Gas Leak': Zap, "Women's Helpline": Phone, "Child Helpline": Baby,
   'Flood / Disaster': AlertTriangle, Default: AlertTriangle,
-};
-
-const CATEGORY_COLORS = {
-  Police: 'from-blue-500 to-blue-700',
-  'Fire Service': 'from-red-500 to-red-700',
-  Ambulance: 'from-green-500 to-green-700',
-  'Gas Leak': 'from-amber-500 to-amber-700',
-  "Women's Helpline": 'from-pink-500 to-pink-700',
-  "Child Helpline": 'from-purple-500 to-purple-700',
-  'Flood / Disaster': 'from-cyan-500 to-cyan-700',
-  Default: 'from-gray-500 to-gray-700',
 };
 
 const CACHE_KEY = 'movemate_emergency_cache';
@@ -50,9 +336,7 @@ export default function Emergency() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // Load from cache first, then API
   useEffect(() => {
-    // Step 1: Load from cache immediately
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
@@ -60,39 +344,41 @@ export default function Emergency() {
         setContacts(data.contacts || []);
         setCategories(data.categories || []);
         setLoading(false);
-      } catch {}
+      } catch (e) { }
     }
-
-    // Step 2: Fetch from API
     fetchFromAPI();
   }, []);
 
   const fetchFromAPI = async () => {
     try {
-      // Get user location for location-aware results
       let lat = DHAKA_CENTER.lat, lng = DHAKA_CENTER.lng;
       try {
         const pos = await new Promise((resolve, reject) =>
-          navigator.geolocation?.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 })
+          navigator.geolocation?.getCurrentPosition(resolve, reject, {
+            timeout: 10000, enableHighAccuracy: true, maximumAge: 60000
+          })
         );
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
-      } catch {}
+      } catch { }
 
       const [catRes, contactRes] = await Promise.all([
         emergencyAPI.getCategories(),
         emergencyAPI.getContacts({ lat, lng }),
       ]);
 
-      const categories = catRes.data.categories || [];
-      const contacts = contactRes.data.contacts || [];
+      const newCategories = catRes.data.categories || [];
+      const newContacts = contactRes.data.contacts || [];
 
-      setCategories(categories);
-      setContacts(contacts);
+      setCategories(newCategories);
+      setContacts(newContacts);
       setIsOffline(false);
 
-      // Cache for offline use
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ categories, contacts, cachedAt: Date.now() }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        categories: newCategories,
+        contacts: newContacts,
+        cachedAt: Date.now()
+      }));
     } catch (err) {
       console.error('Emergency fetch failed:', err);
       setIsOffline(true);
@@ -102,9 +388,7 @@ export default function Emergency() {
   };
 
   const getIcon = (name) => CATEGORY_ICONS[name] || CATEGORY_ICONS.Default;
-  const getColor = (name) => CATEGORY_COLORS[name] || CATEGORY_COLORS.Default;
 
-  // Filter contacts
   const filtered = contacts.filter(c => {
     const matchesSearch = !searchQuery ||
       c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -113,7 +397,6 @@ export default function Emergency() {
     return matchesSearch && matchesCategory;
   });
 
-  // Group by category
   const grouped = {};
   filtered.forEach(c => {
     const cat = c.category_name || 'Other';
@@ -122,65 +405,63 @@ export default function Emergency() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-zinc-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-600 to-red-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+      <div className="bg-white border-b border-zinc-100 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 bg-red-600 rounded-2xl flex items-center justify-center shadow-md">
               <AlertTriangle size={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-heading font-bold text-white">Emergency Contacts</h1>
-              <p className="text-white/70 text-sm">Tap to call — works offline</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Emergency</h1>
+              <p className="text-sm text-zinc-500">Instant help • Works offline</p>
             </div>
           </div>
-
-          {isOffline && (
-            <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2 mt-3">
-              <WifiOff size={14} className="text-white/70" />
-              <span className="text-xs text-white/70">Showing cached data — tap to refresh</span>
-              <button onClick={fetchFromAPI} className="ml-auto text-white/90 hover:text-white">
-                <RefreshCw size={14} />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Search + Filter */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* Improved Search + Category Filters */}
+        <div className="mb-12">
+          {/* Search Bar - Fixed & Clean */}
+          <div className="relative mb-6">
+            <Search size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
               type="text"
-              placeholder="Search by name or number..."
+              placeholder="Search emergency contacts or numbers..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field !pl-10"
+              className="w-full bg-white border border-zinc-200 focus:border-red-400 
+                         rounded-3xl pl-14 py-4 text-base placeholder-zinc-400 
+                         focus:outline-none shadow-sm transition-all duration-300 text-[17px]"
             />
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+
+          {/* Category Filters */}
+          <div className="flex gap-2 overflow-x-auto pb-3 hide-scrollbar">
             <button
               onClick={() => setSelectedCategory('')}
-              className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                !selectedCategory ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-6 py-3 rounded-3xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${!selectedCategory
+                  ? 'bg-zinc-900 text-white shadow-md'
+                  : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700'
+                }`}
             >
               All
             </button>
+
             {categories.map(cat => {
               const Icon = getIcon(cat.name);
               return (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                    selectedCategory === cat.id ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${selectedCategory === cat.id
+                      ? 'bg-zinc-900 text-white shadow-md'
+                      : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700'
+                    }`}
                 >
-                  <Icon size={12} />
+                  <Icon size={17} />
                   {cat.name}
                 </button>
               );
@@ -188,81 +469,105 @@ export default function Emergency() {
           </div>
         </div>
 
-        {/* Nationwide Banner */}
+        {/* Nationwide Emergency Lines */}
         {!searchQuery && !selectedCategory && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
-               <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                 <AlertTriangle size={16} className="text-red-600" />
-               </div>
-               <h2 className="font-heading font-bold text-gray-900">National Emergency Lines</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="mb-16">
+            <h2 className="text-xl font-semibold text-zinc-900 mb-6">Nationwide Emergency Lines</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {NATIONWIDE_NUMBERS.map((n, idx) => (
-                <a key={idx} href={`tel:${n.phone}`} className={`relative overflow-hidden rounded-xl p-4 text-white hover:scale-[1.02] transition-transform shadow-sm group bg-gradient-to-br ${n.color}`}>
-                  <div className="absolute right-0 bottom-0 opacity-10 translate-x-4 translate-y-4 group-hover:-translate-x-1 group-hover:-translate-y-1 transition-transform duration-500">
-                    <n.icon size={80} />
+                <a
+                  key={idx}
+                  href={`tel:${n.phone}`}
+                  className="group bg-white border border-zinc-100 hover:border-red-200 hover:shadow-xl rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 active:scale-[0.985]"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                        <n.icon size={28} className="text-red-600" />
+                      </div>
+                      <p className="font-medium text-zinc-800 leading-tight pr-6">{n.name}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="font-mono text-5xl font-semibold tracking-tighter text-zinc-900 group-hover:text-red-600 transition-colors">
+                        {n.phone}
+                      </div>
+                      <p className="text-xs tracking-[2px] text-red-500 font-medium mt-2">TAP TO CALL</p>
+                    </div>
                   </div>
-                  <n.icon size={20} className="mb-2 text-white/90" />
-                  <p className="text-xs font-medium text-white/80 mb-0.5">{n.name}</p>
-                  <p className="text-2xl font-bold font-heading">{n.phone}</p>
                 </a>
               ))}
             </div>
           </div>
         )}
 
-        {/* Contact Cards */}
+        {/* Contact List */}
         {loading ? (
-          <div className="space-y-4">
-             <div className="h-6 bg-gray-200 rounded w-40 mb-3 animate-pulse" />
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {Array.from({ length: 6 }).map((_, i) => <EmergencyCardSkeleton key={i} />)}
-             </div>
+          <div className="space-y-10">
+            <div className="h-7 bg-zinc-200 rounded w-52 animate-pulse" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => <EmergencyCardSkeleton key={i} />)}
+            </div>
           </div>
         ) : Object.keys(grouped).length > 0 ? (
-          <div className="space-y-8">
+          <div className="space-y-16">
             {Object.entries(grouped).map(([categoryName, categoryContacts]) => {
               const Icon = getIcon(categoryName);
-              const color = getColor(categoryName);
               return (
                 <div key={categoryName}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`}>
-                      <Icon size={16} className="text-white" />
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-10 h-10 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-md">
+                      <Icon size={22} className="text-white" />
                     </div>
-                    <h2 className="font-heading font-bold text-gray-900">{categoryName}</h2>
-                    <span className="text-xs text-muted">({categoryContacts.length})</span>
+                    <div>
+                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">{categoryName}</h2>
+                      <p className="text-sm text-zinc-500">{categoryContacts.length} emergency contacts</p>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {categoryContacts.map(contact => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {categoryContacts.map((contact, index) => (
                       <a
                         key={contact.id}
                         href={`tel:${contact.phone}`}
-                        className="bg-white rounded-xl border border-border p-4 hover:shadow-elevated hover:border-red-200 transition-all group animate-fade-in active:scale-[0.98]"
+                        className="group bg-white border border-zinc-100 hover:border-red-300 rounded-3xl p-7 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-[0.985]"
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                        <div className="flex justify-between items-start">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm text-gray-900 group-hover:text-red-600 transition-colors">
+                            <h3 className="font-semibold text-lg text-zinc-900 group-hover:text-red-600 transition-colors">
                               {contact.name}
                             </h3>
                             {contact.address && (
-                              <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
-                                <MapPin size={10} /> {contact.address}
+                              <p className="text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
+                                <MapPin size={15} /> {contact.address}
                               </p>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-3 bg-red-50 rounded-lg p-2.5 group-hover:bg-red-100 transition-colors">
-                          <Phone size={16} className="text-red-600 shrink-0" />
-                          <span className="text-red-700 font-bold text-sm">{contact.phone}</span>
-                          <span className="ml-auto text-xs text-red-500 font-medium">TAP TO CALL</span>
+                        <div className="mt-8 bg-zinc-50 group-hover:bg-red-50 border border-transparent group-hover:border-red-100 rounded-2xl p-5 transition-all duration-300">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:shadow">
+                              <Phone size={24} className="text-red-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-mono text-3xl font-semibold tracking-tighter text-zinc-900 group-hover:text-red-700">
+                                {contact.phone}
+                              </p>
+                            </div>
+                            <div className="text-xs font-medium text-red-600 tracking-widest self-end pb-1">
+                              CALL NOW
+                            </div>
+                          </div>
                         </div>
 
                         {contact.available_24h && (
-                          <p className="text-[10px] text-green-600 font-medium mt-2">● Available 24/7</p>
+                          <div className="mt-4 flex items-center gap-2 text-emerald-600 text-xs font-medium">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                            Available 24 hours
+                          </div>
                         )}
                       </a>
                     ))}
@@ -272,13 +577,12 @@ export default function Emergency() {
             })}
           </div>
         ) : (
-          <div className="text-center py-16 bg-white rounded-xl border border-border">
-            <AlertTriangle size={48} className="mx-auto mb-3 text-gray-300" />
-            <p className="font-heading font-semibold text-gray-700">No contacts found</p>
-            <p className="text-sm text-muted mt-1">Try clearing your search filters</p>
+          <div className="text-center py-24 bg-white border border-zinc-100 rounded-3xl">
+            <AlertTriangle size={56} className="mx-auto mb-6 text-zinc-300" />
+            <p className="text-2xl font-medium text-zinc-800">No contacts found</p>
+            <p className="text-zinc-500 mt-2">Try adjusting your search or filters</p>
           </div>
         )}
-
       </div>
     </div>
   );

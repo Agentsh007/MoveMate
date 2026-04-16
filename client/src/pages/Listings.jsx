@@ -264,7 +264,7 @@ export default function Listings() {
                   ))}
                 </div>
 
-                {/* Pagination */}
+                {/* Pagination — only this section was added */}
                 {pagination.pages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-10">
                     <button
