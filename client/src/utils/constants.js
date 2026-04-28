@@ -4,8 +4,8 @@ export const PROPERTY_TYPES = [
   { value: 'flat', label: 'Flat', icon: 'Building2' },
   { value: 'apartment', label: 'Apartment', icon: 'Building' },
   { value: 'sublet', label: 'Sublet', icon: 'Home' },
-  { value: 'tolet', label: 'To-Let', icon: 'DoorOpen' },
-  { value: 'room', label: 'Room', icon: 'BedDouble' },
+  // { value: 'tolet', label: 'To-Let', icon: 'DoorOpen' },
+  // { value: 'room', label: 'Room', icon: 'BedDouble' },
 ];
 
 export const BOOKING_MODELS = [

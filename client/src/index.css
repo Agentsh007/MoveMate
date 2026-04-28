@@ -215,6 +215,7 @@
 .leaflet-container {
   font-family: 'DM Sans', sans-serif;
   border-radius: 10px;
+  z-index:0;
 }
 
 /* Marker hover animation */

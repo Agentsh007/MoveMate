@@ -10,7 +10,7 @@ export default function MapView({ latitude, longitude, title, className = '' }) 
   const lng = parseFloat(longitude) || DHAKA_CENTER.lng;
 
   return (
-    <div className={`rounded-xl overflow-hidden border border-border ${className}`}>
+    <div className={` rounded-xl overflow-hidden border border-border ${className}`}>
       <MapContainer
         center={[lat, lng]}
         zoom={15}

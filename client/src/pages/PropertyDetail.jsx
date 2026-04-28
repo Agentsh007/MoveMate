@@ -106,7 +106,8 @@ export default function PropertyDetail() {
 
   const typeLabels = {
     hotel: 'Hotel', flat: 'Flat', apartment: 'Apartment',
-    sublet: 'Sublet', tolet: 'To-Let', room: 'Room',
+    sublet: 'Sublet'
+    // , tolet: 'To-Let', room: 'Room',
   };
 
   return (

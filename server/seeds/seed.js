@@ -21,7 +21,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const { Pool } = pg;
-const pool = new Pool({ 
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
@@ -147,14 +147,14 @@ async function seed() {
       { title: 'Cozy 2-Bed Flat, Mirpur', type: 'flat', model: 'long_term', price: 15000, unit: 'per_month', area: 'Mirpur', beds: 2, baths: 1, guests: 4, sqft: 900 },
       { title: 'Luxury Flat with Lake View', type: 'flat', model: 'long_term', price: 40000, unit: 'per_month', area: 'Gulshan', beds: 3, baths: 2, guests: 5, sqft: 1600 },
       { title: 'Affordable Bachelor Flat', type: 'flat', model: 'long_term', price: 8000, unit: 'per_month', area: 'Mohammadpur', beds: 1, baths: 1, guests: 2, sqft: 500 },
-      { title: 'Serviced Apartment Banani', type: 'apartment', model: 'short_term', price: 4500, unit: 'per_night', area: 'Banani', beds: 2, baths: 2, guests: 4, sqft: 1000, instant: true },
-      { title: 'Executive Apartment Gulshan', type: 'apartment', model: 'short_term', price: 6000, unit: 'per_night', area: 'Gulshan', beds: 3, baths: 2, guests: 6, sqft: 1400, instant: false },
-      { title: 'Studio Apartment Dhanmondi', type: 'apartment', model: 'short_term', price: 2000, unit: 'per_night', area: 'Dhanmondi', beds: 1, baths: 1, guests: 2, sqft: 400, instant: true },
-      { title: 'Sublet Room near BUET', type: 'sublet', model: 'short_term', price: 1500, unit: 'per_night', area: 'Old Dhaka', beds: 1, baths: 1, guests: 1, sqft: 200, instant: true },
-      { title: 'Furnished Sublet in Uttara', type: 'sublet', model: 'short_term', price: 2000, unit: 'per_night', area: 'Uttara', beds: 1, baths: 1, guests: 2, sqft: 300, instant: false },
-      { title: 'Shared Sublet for Students', type: 'sublet', model: 'short_term', price: 800, unit: 'per_night', area: 'Nilkhet', beds: 1, baths: 1, guests: 1, sqft: 150, instant: true },
-      { title: 'Family House To-Let Mirpur', type: 'tolet', model: 'long_term', price: 20000, unit: 'per_month', area: 'Mirpur', beds: 4, baths: 2, guests: 8, sqft: 1800 },
-      { title: 'Commercial Space To-Let Motijheel', type: 'tolet', model: 'long_term', price: 50000, unit: 'per_month', area: 'Motijheel', beds: 0, baths: 1, guests: 10, sqft: 2000 },
+      { title: 'Serviced Apartment Banani', type: 'apartment', model: 'long_term', price: 10500, unit: 'per_month', area: 'Banani', beds: 2, baths: 2, guests: 4, sqft: 1000, instant: true },
+      { title: 'Executive Apartment Gulshan', type: 'apartment', model: 'long_term', price: 16000, unit: 'per_month', area: 'Gulshan', beds: 3, baths: 2, guests: 6, sqft: 1400, instant: false },
+      { title: 'Studio Apartment Dhanmondi', type: 'apartment', model: 'long_term', price: 20000, unit: 'per_month', area: 'Dhanmondi', beds: 1, baths: 1, guests: 2, sqft: 400, instant: true },
+      { title: 'Sublet Room near BUET', type: 'sublet', model: 'long_term', price: 1500, unit: 'per_month', area: 'Old Dhaka', beds: 1, baths: 1, guests: 1, sqft: 200, instant: true },
+      { title: 'Furnished Sublet in Uttara', type: 'sublet', model: 'long_term', price: 2000, unit: 'per_month', area: 'Uttara', beds: 1, baths: 1, guests: 2, sqft: 300, instant: false },
+      { title: 'Shared Sublet for Students', type: 'sublet', model: 'long_term', price: 800, unit: 'per_month', area: 'Nilkhet', beds: 1, baths:1, guests:1, sqft: 150, instant: true },
+      { title: 'Family House To-Let Mirpur', type: 'apartment', model: 'long_term', price: 20000, unit: 'per_month', area: 'Mirpur', beds: 4, baths: 2, guests: 8, sqft: 1800 },
+      { title: 'Commercial Space To-Let Motijheel', type: 'apartment', model: 'long_term', price: 50000, unit: 'per_month', area: 'Motijheel', beds: 0, baths: 1, guests: 10, sqft: 2000 },
     ];
 
     const imageUrls = [
@@ -163,6 +163,26 @@ async function seed() {
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
       'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
       'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800',
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
+      'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800',
+      'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800',
+      'https://images.unsplash.com/photo-1501183638710-841dd1904471?w=800',
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800',
+      'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800',
+      'https://images.unsplash.com/photo-1494526585095-c1bfa7075ae8?w=800',
+      'https://images.unsplash.com/photo-1512918755499-eb9b52b45148?w=800',
+      'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800',
+      'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800',
+      'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=800',
+      'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=800',
+      'https://images.unsplash.com/photo-1505843513577-22bb7abd5eb1?w=800',
+      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800',
+      'https://images.unsplash.com/photo-1501183007986-d0d080b147f9?w=800',
+      'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=800',
+      'https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=800',
+      'https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800',
+      'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800',
+      'https://images.unsplash.com/photo-1505691723518-36a5ac3be353?w=800',
     ];
 
     const amenityOptions = ['WiFi', 'AC', 'Parking', 'Kitchen', 'Elevator', 'Generator', 'Security', 'Laundry', 'Rooftop', 'Gym', 'Pool', 'CCTV', 'Balcony', 'Furnished'];
@@ -202,9 +222,12 @@ async function seed() {
       properties.push(property);
 
       for (let j = 0; j < 5; j++) {
+        // Shift through the massive array of images so properties get completely unique or widely diverse sets
+        const imageIndex = (i * 5 + j) % imageUrls.length;
+
         await client.query(
           `INSERT INTO property_images (property_id, url, is_primary, display_order) VALUES ($1, $2, $3, $4)`,
-          [property.id, imageUrls[j], j === 0, j]
+          [property.id, imageUrls[imageIndex], j === 0, j]
         );
       }
 
