@@ -213,37 +213,52 @@
 // Register Page — Redesigned UI (logic unchanged)
 // =============================================
 
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
-  Eye, EyeOff, UserPlus, Loader2, User, Building2,
-  MapPin, Star, Shield, CheckCircle2,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
-import { authAPI } from '../../api/auth.api';
+  Eye,
+  EyeOff,
+  UserPlus,
+  Loader2,
+  User,
+  Building2,
+  MapPin,
+  Star,
+  Shield,
+  CheckCircle2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
+import { authAPI } from "../../api/auth.api";
 
 // ── Schema (unchanged) ─────────────────────────────────────────────────
-const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Enter a valid email'),
-  phone: z.string().optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-}).refine((d) => d.password === d.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+const registerSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Enter a valid email"),
+    phone: z.string().optional(),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 // ── Animation helpers ──────────────────────────────────────────────────
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.48, delay: i * 0.08, ease: [0.25, 0.46, 0.45, 0.94] },
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.48,
+      delay: i * 0.08,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
   }),
 };
 const stagger = { visible: { transition: { staggerChildren: 0.07 } } };
@@ -258,20 +273,20 @@ const errorAnim = {
 // ── Role card data ─────────────────────────────────────────────────────
 const ROLES = [
   {
-    value: 'user',
+    value: "user",
     icon: User,
-    title: 'Find a Place',
-    desc: 'Browse & book rentals',
-    active: 'border-primary bg-primary/6 text-primary',
-    glow: 'shadow-primary/20',
+    title: "Find a Place",
+    desc: "Browse & book rentals",
+    active: "border-primary bg-primary/6 text-primary",
+    glow: "shadow-primary/20",
   },
   {
-    value: 'owner',
+    value: "owner",
     icon: Building2,
-    title: 'List Property',
-    desc: 'Reach verified renters',
-    active: 'border-accent bg-accent/6 text-accent',
-    glow: 'shadow-accent/20',
+    title: "List Property",
+    desc: "Reach verified renters",
+    active: "border-accent bg-accent/6 text-accent",
+    glow: "shadow-accent/20",
   },
 ];
 
@@ -279,11 +294,16 @@ const ROLES = [
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('user');
+  const [selectedRole, setSelectedRole] = useState("user");
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ── RHF + Zod (unchanged) ──────────────────────────────────────────
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
     resolver: zodResolver(registerSchema),
   });
 
@@ -298,10 +318,14 @@ export default function Register() {
         password: formData.password,
         role: selectedRole,
       });
-      toast.success(`Welcome to MoveMate, ${data.data?.user?.name || formData.name}!`);
-      navigate('/', { replace: true });
+      toast.success(
+        `Welcome to MoveMate, ${data.data?.user?.name || formData.name}!`,
+      );
+
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed');
+      toast.error(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -310,30 +334,42 @@ export default function Register() {
   // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex overflow-hidden">
-
       {/* ── LEFT PANEL ──────────────────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[48%] relative flex-col justify-between p-12
-                      bg-gradient-to-br from-[#0f1923] via-[#1a2840] to-[#0f1923] overflow-hidden">
-
+      <div
+        className="hidden lg:flex lg:w-[48%] relative flex-col justify-between p-12
+                      bg-gradient-to-br from-[#0f1923] via-[#1a2840] to-[#0f1923] overflow-hidden"
+      >
         {/* Ambient glows */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <motion.div
             className="absolute -top-24 -right-24 w-[480px] h-[480px] rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%)' }}
+            style={{
+              background:
+                "radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%)",
+            }}
             animate={{ scale: [1, 1.14, 1] }}
-            transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
             className="absolute bottom-0 -left-20 w-[360px] h-[360px] rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.11) 0%, transparent 70%)' }}
+            style={{
+              background:
+                "radial-gradient(circle, rgba(59,130,246,0.11) 0%, transparent 70%)",
+            }}
             animate={{ scale: [1, 1.09, 1] }}
-            transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+            transition={{
+              duration: 11,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 2,
+            }}
           />
           <div
             className="absolute inset-0 opacity-[0.035]"
             style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
-              backgroundSize: '52px 52px',
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)",
+              backgroundSize: "52px 52px",
             }}
           />
         </div>
@@ -355,7 +391,10 @@ export default function Register() {
           animate="visible"
           variants={stagger}
         >
-          <motion.p variants={fadeUp} className="text-accent font-semibold text-sm uppercase tracking-widest mb-4">
+          <motion.p
+            variants={fadeUp}
+            className="text-accent font-semibold text-sm uppercase tracking-widest mb-4"
+          >
             Join MoveMate Today
           </motion.p>
 
@@ -368,26 +407,32 @@ export default function Register() {
             <br />
             <span
               style={{
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                backgroundImage: 'linear-gradient(135deg, #f97316 0%, #fbbf24 100%)',
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                backgroundImage:
+                  "linear-gradient(135deg, #f97316 0%, #fbbf24 100%)",
               }}
             >
               to a new home.
             </span>
           </motion.h2>
 
-          <motion.p variants={fadeUp} custom={2} className="text-slate-400 mt-5 text-base leading-relaxed max-w-sm">
-            Whether you're relocating to Dhaka or listing a property in Chittagong — MoveMate connects you to what matters.
+          <motion.p
+            variants={fadeUp}
+            custom={2}
+            className="text-slate-400 mt-5 text-base leading-relaxed max-w-sm"
+          >
+            Whether you're relocating to Dhaka or listing a property in
+            Chittagong — MoveMate connects you to what matters.
           </motion.p>
 
           {/* Benefits list */}
           <motion.div variants={fadeUp} custom={3} className="mt-9 space-y-3">
             {[
-              { icon: CheckCircle2, text: 'Free to join — no hidden charges' },
-              { icon: MapPin, text: 'Properties across all major cities' },
-              { icon: Star, text: 'Verified listings with real reviews' },
-              { icon: Shield, text: 'Secure bookings & payments' },
+              { icon: CheckCircle2, text: "Free to join — no hidden charges" },
+              { icon: MapPin, text: "Properties across all major cities" },
+              { icon: Star, text: "Verified listings with real reviews" },
+              { icon: Shield, text: "Secure bookings & payments" },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center shrink-0">
@@ -407,8 +452,12 @@ export default function Register() {
           transition={{ delay: 0.7 }}
         >
           <p className="text-slate-500 text-sm">
-            Already have an account?{' '}
-            <Link to="/login" className="text-accent font-semibold hover:text-orange-400 transition-colors">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              state={{ from: location.state?.from }}
+              className="text-accent font-semibold hover:text-orange-400 transition-colors"
+            >
               Sign in →
             </Link>
           </p>
@@ -427,7 +476,9 @@ export default function Register() {
           <motion.div variants={fadeUp} className="lg:hidden text-center mb-8">
             <Link to="/" className="inline-flex items-center gap-2">
               <div className="w-9 h-9 bg-gradient-to-br from-accent to-orange-400 rounded-xl flex items-center justify-center">
-                <span className="text-white font-heading font-bold text-lg">M</span>
+                <span className="text-white font-heading font-bold text-lg">
+                  M
+                </span>
               </div>
               <span className="font-heading font-bold text-xl text-gray-900">
                 Move<span className="text-accent">Mate</span>
@@ -437,8 +488,12 @@ export default function Register() {
 
           {/* Heading */}
           <motion.div variants={fadeUp} className="mb-7">
-            <h1 className="text-3xl font-heading font-bold text-gray-900">Create your account</h1>
-            <p className="text-muted mt-1.5 text-sm">Join thousands finding their perfect home</p>
+            <h1 className="text-3xl font-heading font-bold text-gray-900">
+              Create your account
+            </h1>
+            <p className="text-muted mt-1.5 text-sm">
+              Join thousands finding their perfect home
+            </p>
           </motion.div>
 
           {/* Card */}
@@ -447,64 +502,93 @@ export default function Register() {
             custom={1}
             className="bg-white rounded-3xl shadow-[0_4px_40px_rgba(0,0,0,0.08)] border border-gray-100 p-7"
           >
-
             {/* ── Role Selector ── */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">I want to</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                I want to
+              </label>
               <div className="grid grid-cols-2 gap-3">
-                {ROLES.map(({ value, icon: Icon, title, desc, active, glow }) => (
-                  <motion.button
-                    key={value}
-                    type="button"
-                    onClick={() => setSelectedRole(value)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    className={`relative flex flex-col items-start gap-1 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${selectedRole === value
-                        ? `${active} shadow-lg ${glow}`
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300 bg-white'
+                {ROLES.map(
+                  ({ value, icon: Icon, title, desc, active, glow }) => (
+                    <motion.button
+                      key={value}
+                      type="button"
+                      onClick={() => setSelectedRole(value)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      className={`relative flex flex-col items-start gap-1 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                        selectedRole === value
+                          ? `${active} shadow-lg ${glow}`
+                          : "border-gray-200 text-gray-500 hover:border-gray-300 bg-white"
                       }`}
-                  >
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-0.5 ${selectedRole === value ? 'bg-current/10' : 'bg-gray-100'
-                      }`}>
-                      <Icon size={16} className={selectedRole === value ? 'text-current' : 'text-gray-400'} />
-                    </div>
-                    <p className="font-bold text-sm leading-none">{title}</p>
-                    <p className={`text-xs leading-snug ${selectedRole === value ? 'text-current opacity-70' : 'text-gray-400'}`}>
-                      {desc}
-                    </p>
-                    {selectedRole === value && (
-                      <motion.div
-                        layoutId="role-check"
-                        className="absolute top-3 right-3"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center mb-0.5 ${
+                          selectedRole === value
+                            ? "bg-current/10"
+                            : "bg-gray-100"
+                        }`}
                       >
-                        <CheckCircle2 size={14} className="text-current" />
-                      </motion.div>
-                    )}
-                  </motion.button>
-                ))}
+                        <Icon
+                          size={16}
+                          className={
+                            selectedRole === value
+                              ? "text-current"
+                              : "text-gray-400"
+                          }
+                        />
+                      </div>
+                      <p className="font-bold text-sm leading-none">{title}</p>
+                      <p
+                        className={`text-xs leading-snug ${selectedRole === value ? "text-current opacity-70" : "text-gray-400"}`}
+                      >
+                        {desc}
+                      </p>
+                      {selectedRole === value && (
+                        <motion.div
+                          layoutId="role-check"
+                          className="absolute top-3 right-3"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 20,
+                          }}
+                        >
+                          <CheckCircle2 size={14} className="text-current" />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  ),
+                )}
               </div>
             </div>
 
             {/* ── Form fields ── */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
               {/* Name */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   placeholder="John Doe"
                   autoComplete="name"
-                  className={`input-field transition-all duration-200 ${errors.name ? 'border-danger focus:ring-danger/20' : 'focus:border-accent focus:ring-accent/15'
-                    }`}
-                  {...register('name')}
+                  className={`input-field transition-all duration-200 ${
+                    errors.name
+                      ? "border-danger focus:ring-danger/20"
+                      : "focus:border-accent focus:ring-accent/15"
+                  }`}
+                  {...register("name")}
                 />
                 <AnimatePresence>
                   {errors.name && (
-                    <motion.p {...errorAnim} className="text-danger text-xs mt-1.5">
+                    <motion.p
+                      {...errorAnim}
+                      className="text-danger text-xs mt-1.5"
+                    >
                       {errors.name.message}
                     </motion.p>
                   )}
@@ -513,18 +597,26 @@ export default function Register() {
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   placeholder="you@example.com"
                   autoComplete="email"
-                  className={`input-field transition-all duration-200 ${errors.email ? 'border-danger focus:ring-danger/20' : 'focus:border-accent focus:ring-accent/15'
-                    }`}
-                  {...register('email')}
+                  className={`input-field transition-all duration-200 ${
+                    errors.email
+                      ? "border-danger focus:ring-danger/20"
+                      : "focus:border-accent focus:ring-accent/15"
+                  }`}
+                  {...register("email")}
                 />
                 <AnimatePresence>
                   {errors.email && (
-                    <motion.p {...errorAnim} className="text-danger text-xs mt-1.5">
+                    <motion.p
+                      {...errorAnim}
+                      className="text-danger text-xs mt-1.5"
+                    >
                       {errors.email.message}
                     </motion.p>
                   )}
@@ -534,29 +626,36 @@ export default function Register() {
               {/* Phone */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Phone{' '}
-                  <span className="text-gray-400 font-normal text-xs">(optional)</span>
+                  Phone{" "}
+                  <span className="text-gray-400 font-normal text-xs">
+                    (optional)
+                  </span>
                 </label>
                 <input
                   type="tel"
                   placeholder="+880 17XX-XXXXXX"
                   autoComplete="tel"
                   className="input-field focus:border-accent focus:ring-accent/15 transition-all duration-200"
-                  {...register('phone')}
+                  {...register("phone")}
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Password
+                </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Min. 6 characters"
                     autoComplete="new-password"
-                    className={`input-field pr-11 transition-all duration-200 ${errors.password ? 'border-danger focus:ring-danger/20' : 'focus:border-accent focus:ring-accent/15'
-                      }`}
-                    {...register('password')}
+                    className={`input-field pr-11 transition-all duration-200 ${
+                      errors.password
+                        ? "border-danger focus:ring-danger/20"
+                        : "focus:border-accent focus:ring-accent/15"
+                    }`}
+                    {...register("password")}
                   />
                   <button
                     type="button"
@@ -569,7 +668,10 @@ export default function Register() {
                 </div>
                 <AnimatePresence>
                   {errors.password && (
-                    <motion.p {...errorAnim} className="text-danger text-xs mt-1.5">
+                    <motion.p
+                      {...errorAnim}
+                      className="text-danger text-xs mt-1.5"
+                    >
                       {errors.password.message}
                     </motion.p>
                   )}
@@ -578,18 +680,26 @@ export default function Register() {
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Confirm Password
+                </label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Repeat your password"
                   autoComplete="new-password"
-                  className={`input-field transition-all duration-200 ${errors.confirmPassword ? 'border-danger focus:ring-danger/20' : 'focus:border-accent focus:ring-accent/15'
-                    }`}
-                  {...register('confirmPassword')}
+                  className={`input-field transition-all duration-200 ${
+                    errors.confirmPassword
+                      ? "border-danger focus:ring-danger/20"
+                      : "focus:border-accent focus:ring-accent/15"
+                  }`}
+                  {...register("confirmPassword")}
                 />
                 <AnimatePresence>
                   {errors.confirmPassword && (
-                    <motion.p {...errorAnim} className="text-danger text-xs mt-1.5">
+                    <motion.p
+                      {...errorAnim}
+                      className="text-danger text-xs mt-1.5"
+                    >
                       {errors.confirmPassword.message}
                     </motion.p>
                   )}
@@ -608,14 +718,18 @@ export default function Register() {
                   {loading ? (
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                     >
                       <Loader2 size={17} />
                     </motion.div>
                   ) : (
                     <UserPlus size={17} />
                   )}
-                  {loading ? 'Creating account...' : 'Create Account'}
+                  {loading ? "Creating account..." : "Create Account"}
                 </motion.button>
               </div>
             </form>
@@ -628,8 +742,12 @@ export default function Register() {
             </div>
 
             <p className="text-center text-sm text-muted mt-5">
-              Already have an account?{' '}
-              <Link to="/login" className="text-accent font-semibold hover:text-accent-hover transition-colors">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                state={{ from: location.state?.from }}
+                className="text-accent font-semibold hover:text-accent-hover transition-colors"
+              >
                 Sign in
               </Link>
             </p>

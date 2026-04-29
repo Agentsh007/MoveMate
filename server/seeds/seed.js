@@ -147,14 +147,14 @@ async function seed() {
       { title: 'Cozy 2-Bed Flat, Mirpur', type: 'flat', model: 'long_term', price: 15000, unit: 'per_month', area: 'Mirpur', beds: 2, baths: 1, guests: 4, sqft: 900 },
       { title: 'Luxury Flat with Lake View', type: 'flat', model: 'long_term', price: 40000, unit: 'per_month', area: 'Gulshan', beds: 3, baths: 2, guests: 5, sqft: 1600 },
       { title: 'Affordable Bachelor Flat', type: 'flat', model: 'long_term', price: 8000, unit: 'per_month', area: 'Mohammadpur', beds: 1, baths: 1, guests: 2, sqft: 500 },
-      { title: 'Serviced Apartment Banani', type: 'apartment', model: 'long_term', price: 10500, unit: 'per_month', area: 'Banani', beds: 2, baths: 2, guests: 4, sqft: 1000, instant: true },
-      { title: 'Executive Apartment Gulshan', type: 'apartment', model: 'long_term', price: 16000, unit: 'per_month', area: 'Gulshan', beds: 3, baths: 2, guests: 6, sqft: 1400, instant: false },
-      { title: 'Studio Apartment Dhanmondi', type: 'apartment', model: 'long_term', price: 20000, unit: 'per_month', area: 'Dhanmondi', beds: 1, baths: 1, guests: 2, sqft: 400, instant: true },
-      { title: 'Sublet Room near BUET', type: 'sublet', model: 'long_term', price: 1500, unit: 'per_month', area: 'Old Dhaka', beds: 1, baths: 1, guests: 1, sqft: 200, instant: true },
-      { title: 'Furnished Sublet in Uttara', type: 'sublet', model: 'long_term', price: 2000, unit: 'per_month', area: 'Uttara', beds: 1, baths: 1, guests: 2, sqft: 300, instant: false },
-      { title: 'Shared Sublet for Students', type: 'sublet', model: 'long_term', price: 800, unit: 'per_month', area: 'Nilkhet', beds: 1, baths:1, guests:1, sqft: 150, instant: true },
-      { title: 'Family House To-Let Mirpur', type: 'apartment', model: 'long_term', price: 20000, unit: 'per_month', area: 'Mirpur', beds: 4, baths: 2, guests: 8, sqft: 1800 },
-      { title: 'Commercial Space To-Let Motijheel', type: 'apartment', model: 'long_term', price: 50000, unit: 'per_month', area: 'Motijheel', beds: 0, baths: 1, guests: 10, sqft: 2000 },
+      { title: 'Serviced Apartment Banani', type: 'apartment', model: 'short_term', price: 4500, unit: 'per_night', area: 'Banani', beds: 2, baths: 2, guests: 4, sqft: 1000, instant: true },
+      { title: 'Executive Apartment Gulshan', type: 'apartment', model: 'short_term', price: 6000, unit: 'per_night', area: 'Gulshan', beds: 3, baths: 2, guests: 6, sqft: 1400, instant: false },
+      { title: 'Studio Apartment Dhanmondi', type: 'apartment', model: 'short_term', price: 2000, unit: 'per_night', area: 'Dhanmondi', beds: 1, baths: 1, guests: 2, sqft: 400, instant: true },
+      { title: 'Sublet Room near BUET', type: 'sublet', model: 'short_term', price: 1500, unit: 'per_night', area: 'Old Dhaka', beds: 1, baths: 1, guests: 1, sqft: 200, instant: true },
+      { title: 'Furnished Sublet in Uttara', type: 'sublet', model: 'short_term', price: 2000, unit: 'per_night', area: 'Uttara', beds: 1, baths: 1, guests: 2, sqft: 300, instant: false },
+      { title: 'Shared Sublet for Students', type: 'sublet', model: 'short_term', price: 800, unit: 'per_night', area: 'Nilkhet', beds: 1, baths: 1, guests: 1, sqft: 150, instant: true },
+      { title: 'Family House To-Let Mirpur', type: 'tolet', model: 'long_term', price: 20000, unit: 'per_month', area: 'Mirpur', beds: 4, baths: 2, guests: 8, sqft: 1800 },
+      { title: 'Commercial Space To-Let Motijheel', type: 'tolet', model: 'long_term', price: 50000, unit: 'per_month', area: 'Motijheel', beds: 0, baths: 1, guests: 10, sqft: 2000 },
     ];
 
     const imageUrls = [

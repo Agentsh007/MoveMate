@@ -44,7 +44,14 @@ app.use(helmet());
 // CORS: Allow requests from our React frontend
 // credentials: true = allow cookies/auth headers from frontend
 app.use(cors({
-  origin: [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'].filter(Boolean),
+  origin: [
+    process.env.CLIENT_URL,
+    'https://move-mate-chatzyubm-md-shanto-islams-projects.vercel.app',
+    'https://movemate.bytedreams.studio',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175'
+  ].filter(Boolean),
   credentials: true,
 }));
 

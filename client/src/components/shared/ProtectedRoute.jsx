@@ -5,9 +5,9 @@
 // Shows loading spinner while auth state initializes.
 // =============================================
 
-import { Navigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import useAuthStore from '../../store/authStore';
+import { Navigate, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import useAuthStore from "../../store/authStore";
 
 export const ProtectedRoute = ({ children }) => {
   const { user, session, loading } = useAuthStore();
@@ -30,6 +30,7 @@ export const ProtectedRoute = ({ children }) => {
 
 export const OwnerRoute = ({ children }) => {
   const { user, session, loading } = useAuthStore();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -40,10 +41,10 @@ export const OwnerRoute = ({ children }) => {
   }
 
   if (!session || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (user.role !== 'owner' && user.role !== 'admin') {
+  if (user.role !== "owner" && user.role !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 

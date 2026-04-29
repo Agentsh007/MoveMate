@@ -3,20 +3,28 @@
 // Soothing & Clean Design with Smooth Animations
 // =============================================
 
-import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  Menu, X, Home, Building2, MapPin, AlertTriangle,
-  LogOut, PlusCircle, LayoutDashboard, ChevronDown
-} from 'lucide-react';
-import useAuthStore from '../../store/authStore';
-import NotificationBell from './NotificationBell';
+  Menu,
+  X,
+  Home,
+  Building2,
+  MapPin,
+  AlertTriangle,
+  LogOut,
+  PlusCircle,
+  LayoutDashboard,
+  ChevronDown,
+} from "lucide-react";
+import useAuthStore from "../../store/authStore";
+import NotificationBell from "./NotificationBell";
 
 const NAV_LINKS = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/listings', label: 'Listings', icon: Building2 },
-  { to: '/essentials', label: 'Essentials', icon: MapPin },
-  { to: '/emergency', label: 'Emergency', icon: AlertTriangle },
+  { to: "/", label: "Home", icon: Home },
+  { to: "/listings", label: "Listings", icon: Building2 },
+  { to: "/essentials", label: "Essentials", icon: MapPin },
+  { to: "/emergency", label: "Emergency", icon: AlertTriangle },
 ];
 
 export default function Navbar() {
@@ -30,7 +38,7 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     setProfileOpen(false);
-    navigate('/');
+    navigate("/");
   };
 
   const isActive = (path) => location.pathname === path;
@@ -42,19 +50,20 @@ export default function Navbar() {
         setProfileOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-b border-zinc-100 shadow-sm">
       <div className="max-w-5xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-9 h-9 bg-blue-600 rounded-2xl flex items-center justify-center shadow-sm transition-all duration-300 group-hover:scale-105 group-active:scale-95">
-              <span className="text-white font-bold text-xl tracking-tighter">M</span>
+              <span className="text-white font-bold text-xl tracking-tighter">
+                M
+              </span>
             </div>
             <span className="font-semibold text-2xl tracking-tight text-zinc-900 hidden sm:block transition-colors group-hover:text-zinc-800">
               Move<span className="text-blue-600">Mate</span>
@@ -67,14 +76,15 @@ export default function Navbar() {
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-300 ${isActive(to)
-                    ? 'bg-zinc-900 text-white shadow-sm'
-                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
-                  }`}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-300 ${
+                  isActive(to)
+                    ? "bg-zinc-900 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                }`}
               >
                 <Icon
                   size={17}
-                  className={`transition-transform duration-200 ${isActive(to) ? 'scale-110' : 'group-hover:scale-110'}`}
+                  className={`transition-transform duration-200 ${isActive(to) ? "scale-110" : "group-hover:scale-110"}`}
                 />
                 {label}
               </Link>
@@ -91,10 +101,11 @@ export default function Navbar() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setProfileOpen(!profileOpen)}
-                    className={`flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-3xl border transition-all duration-300 ${profileOpen
-                        ? 'bg-zinc-50 border-zinc-200 shadow-sm'
-                        : 'border-transparent hover:bg-zinc-50'
-                      }`}
+                    className={`flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-3xl border transition-all duration-300 ${
+                      profileOpen
+                        ? "bg-zinc-50 border-zinc-200 shadow-sm"
+                        : "border-transparent hover:bg-zinc-50"
+                    }`}
                   >
                     <div className="relative">
                       <div className="w-8 h-8 bg-zinc-900 rounded-2xl flex items-center justify-center text-white text-sm font-semibold shadow-sm transition-transform hover:scale-105">
@@ -104,13 +115,17 @@ export default function Navbar() {
                     </div>
 
                     <div className="hidden sm:block text-left">
-                      <p className="text-sm font-medium text-zinc-900">{user.name}</p>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">{user.role}</p>
+                      <p className="text-sm font-medium text-zinc-900">
+                        {user.name}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">
+                        {user.role}
+                      </p>
                     </div>
 
                     <ChevronDown
                       size={15}
-                      className={`text-zinc-400 transition-transform duration-300 ${profileOpen ? 'rotate-180' : ''}`}
+                      className={`text-zinc-400 transition-transform duration-300 ${profileOpen ? "rotate-180" : ""}`}
                     />
                   </button>
 
@@ -124,8 +139,12 @@ export default function Navbar() {
                             {user.name?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-semibold text-zinc-900 text-base">{user.name}</p>
-                            <p className="text-sm text-zinc-500 truncate">{user.email}</p>
+                            <p className="font-semibold text-zinc-900 text-base">
+                              {user.name}
+                            </p>
+                            <p className="text-sm text-zinc-500 truncate">
+                              {user.email}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -137,11 +156,14 @@ export default function Navbar() {
                           onClick={() => setProfileOpen(false)}
                           className="flex items-center gap-3 px-5 py-3.5 text-sm text-zinc-700 hover:bg-zinc-50 rounded-2xl transition-all hover:translate-x-1 duration-200"
                         >
-                          <LayoutDashboard size={18} className="text-zinc-500" />
+                          <LayoutDashboard
+                            size={18}
+                            className="text-zinc-500"
+                          />
                           Dashboard
                         </Link>
 
-                        {(user.role === 'owner' || user.role === 'admin') && (
+                        {(user.role === "owner" || user.role === "admin") && (
                           <>
                             <Link
                               to="/owner"
@@ -181,12 +203,14 @@ export default function Navbar() {
               <div className="flex items-center gap-3">
                 <Link
                   to="/login"
+                  state={{ from: location.pathname }}
                   className="px-6 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-2xl transition-all duration-200"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
+                  state={{ from: location.pathname }}
                   className="px-6 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-sm transition-all duration-200 active:scale-[0.97]"
                 >
                   Register
@@ -207,8 +231,9 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden bg-white border-t border-zinc-100 overflow-hidden transition-all duration-300 ease-out ${mobileOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-          }`}
+        className={`md:hidden bg-white border-t border-zinc-100 overflow-hidden transition-all duration-300 ease-out ${
+          mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        }`}
       >
         <div className="px-6 py-6 space-y-1">
           {NAV_LINKS.map(({ to, label, icon: Icon }) => (
@@ -216,10 +241,11 @@ export default function Navbar() {
               key={to}
               to={to}
               onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-base font-medium transition-all duration-200 ${isActive(to)
-                  ? 'bg-zinc-900 text-white'
-                  : 'text-zinc-700 hover:bg-zinc-50'
-                }`}
+              className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-base font-medium transition-all duration-200 ${
+                isActive(to)
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-700 hover:bg-zinc-50"
+              }`}
             >
               <Icon size={20} />
               {label}
