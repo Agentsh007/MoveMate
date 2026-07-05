@@ -1,7 +1,7 @@
 import axios from 'axios';
 import api from './axiosInstance';
 
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_URL = 'https://overpass.private.coffee/api/interpreter';
 
 function getBoundingBox(lat, lng, radiusKm) {
   const latDelta = radiusKm / 111.0;
@@ -24,7 +24,7 @@ export const fetchOverpassData = async (lat, lng, radiusKm, categoryQuery) => {
   
   try {
     const response = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(query)}`, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' }
     });
     return response.data.elements || [];
   } catch (error) {
