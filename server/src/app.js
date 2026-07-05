@@ -46,7 +46,7 @@ app.use(helmet());
 app.use(cors({
   origin: [
     process.env.CLIENT_URL,
-    'https://move-mate-six.vercel.app'
+    'https://move-mate-six.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175'
